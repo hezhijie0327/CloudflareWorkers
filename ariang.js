@@ -1,4 +1,4 @@
-// Current Version: 1.0.0
+// Current Version: 1.0.1
 // Description: Using Cloudflare Workers to proxy visit "https://ariang.mayswind.net/latest".
 
 addEventListener("fetch", (event) => {
@@ -72,6 +72,7 @@ async function handleRequest(request) {
             confirmTaskRemoval: true,
             displayOrder: "default:asc",
             downloadTaskRefreshInterval: 1000,
+            dragAndDropTasks: true,
             extendRpcServers: server,
             fileListDisplayOrder: "default:asc",
             globalStatRefreshInterval: 1000,
@@ -87,6 +88,8 @@ async function handleRequest(request) {
             rpcListDisplayOrder: "rpcAlias",
             rpcPort: "6800",
             secret: btoa(path[0]),
+            swipeGesture: true,
+            theme: "system",
             title: "${title} - ${rpcprofile}",
             titleRefreshInterval: 0,
         };
