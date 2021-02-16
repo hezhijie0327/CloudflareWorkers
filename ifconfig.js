@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to show website visiter's IP address and country in JSON.
 
 addEventListener("fetch", (event) => {
@@ -44,7 +44,7 @@ async function handleRequest(request) {
         };
         var status_code = "404";
     }
-    return new Response(JSON.stringify(data, null, 4), {
+    return new Response(JSON.stringify(data, null, 2), {
         status: status_code,
         headers: {
             "Access-Control-Allow-Origin": "*",
