@@ -1,9 +1,9 @@
-// Current Version: 1.0.0
+// Current Version: 1.0.1
 // Description: Using Cloudflare Workers to speed up github.com's visting.
 
 addEventListener("fetch", (event) => {
     const clone_mode = false;
-    if (clone_mode == true) {
+    if (clone_mode === true) {
         let url = new URL(event.request.url);
         url.host = "github.com";
         event.respondWith(fetch(new Request(url, event.request)));
@@ -26,17 +26,17 @@ async function handleRequest(request) {
     var response_image = await fetch("https://user-images.githubusercontent.com/" + url);
     var response_raw = await fetch("https://raw.githubusercontent.com/" + url);
     var response_release = await fetch("https://github-releases.githubusercontent.com/" + url);
-    if (response_archive_blob_edit_raw_release.status == 200) {
-        if (path[2].search(/\.git$/gim) != "-1") {
+    if (response_archive_blob_edit_raw_release.status === 200) {
+        if (path[2].search(/\.git$/gim) !== "-1") {
             return Response.redirect("https://" + clone_url[Math.floor(Math.random() * clone_url.length)] + "/" + url, 302);
         } else {
-            if (path[3] == "archive" || (path[3] == "releases" && path[4] == "download")) {
+            if (path[3] === "archive" || (path[3] === "releases" && path[4] === "download")) {
                 response = response_archive_blob_edit_raw_release;
-            } else if (path[3] == "blob" || path[3] == "edit" || path[3] == "raw") {
+            } else if (path[3] === "blob" || path[3] === "edit" || path[3] === "raw") {
                 for (var i = 0; i < path.length; i++) {
-                    if (i == 0) {
+                    if (i === 0) {
                         url = path[i];
-                    } else if (i == 3) {
+                    } else if (i === 3) {
                         url = url;
                     } else {
                         url = url + "/" + path[i];
@@ -45,16 +45,16 @@ async function handleRequest(request) {
                 return Response.redirect("https://" + url, 301);
             }
         }
-    } else if (response_desktop.status == 200) {
+    } else if (response_desktop.status === 200) {
         response = response_desktop;
-    } else if (response_image.status == 200) {
+    } else if (response_image.status === 200) {
         response = response_image;
-    } else if (response_raw.status == 200) {
+    } else if (response_raw.status === 200) {
         response = response_raw;
-    } else if (response_release.status == 200) {
+    } else if (response_release.status === 200) {
         response = response_release;
     }
-    if (response != "") {
+    if (response !== "") {
         return new Response(response.body, {
             status: 200,
             headers: response.headers,
