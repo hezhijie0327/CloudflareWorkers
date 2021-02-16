@@ -1,4 +1,4 @@
-// Current Version: 1.0.0
+// Current Version: 1.0.1
 // Description: Using Cloudflare Workers to speed up fonts.googleapis.com and fonts.gstatic.com's visting.
 
 addEventListener("fetch", (event) => {
@@ -11,7 +11,7 @@ async function handleRequest(request) {
     url = url.substr(url.indexOf("/") + 1);
     var response_css = await fetch("https://fonts.googleapis.com/" + url);
     var response_font = await fetch("https://fonts.gstatic.com/" + url);
-    if (url == "" || (response_css.status != 200 && response_font.status != 200)) {
+    if (url === "" || (response_css.status !== 200 && response_font.status !== 200)) {
         return new Response("404 Not Found", {
             status: 404,
             headers: {
@@ -20,7 +20,7 @@ async function handleRequest(request) {
             },
         });
     } else {
-        if (response_css.status == 200) {
+        if (response_css.status === 200) {
             css = await response_css.text();
             return new Response(css.replace(/fonts\.gstatic\.com/gim, path[0]), {
                 status: 200,
