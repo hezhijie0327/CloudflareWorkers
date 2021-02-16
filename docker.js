@@ -1,9 +1,9 @@
-// Current Version: 1.0.0
+// Current Version: 1.0.1
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to [acr_prefix].mirror.aliyuncs.com or [swr_prefix].mirror.swr.myhuaweicloud.com.
 
 addEventListener("fetch", (event) => {
     const enable_mirror = true;
-    if (enable_mirror == false) {
+    if (enable_mirror === false) {
         let url = new URL(event.request.url);
         url.host = "registry-1.docker.io";
         event.respondWith(fetch(new Request(url, event.request)));
@@ -19,7 +19,7 @@ async function handleRequest(request) {
     let url = request.url.substr(8);
     url = url.substr(url.indexOf("/") + 1);
     var response = await fetch("https://registry-1.docker.io/" + url);
-    if (url != "" && response.status == 200) {
+    if (url !== "" && response.status === 200) {
         return Response.redirect("https://" + mirror_url[Math.floor(Math.random() * mirror_url.length)] + "/" + url, 302);
     } else {
         return new Response("404 Not Found", {
