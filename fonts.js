@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to speed up fonts.googleapis.com and fonts.gstatic.com's visting.
 
 addEventListener("fetch", (event) => {
@@ -38,6 +38,14 @@ async function handleRequest(request) {
                         "content-type": "font/collection;charset=UTF-8",
                     },
                 });
+            } else if (url.includes(".eot")) {
+                return new Response(response.body, {
+                    status: 200,
+                    headers: {
+                        "Access-Control-Allow-Origin": "*",
+                        "content-type": "application/vnd.ms-fontobject;charset=UTF-8",
+                    },
+                });
             } else if (url.includes(".otf")) {
                 return new Response(response_font.body, {
                     status: 200,
@@ -52,6 +60,14 @@ async function handleRequest(request) {
                     headers: {
                         "Access-Control-Allow-Origin": "*",
                         "content-type": "font/sfnt;charset=UTF-8",
+                    },
+                });
+            } else if (url.includes(".svg")) {
+                return new Response(response.body, {
+                    status: 200,
+                    headers: {
+                        "Access-Control-Allow-Origin": "*",
+                        "content-type": "image/svg+xml;charset=UTF-8",
                     },
                 });
             } else if (url.includes(".ttf")) {
