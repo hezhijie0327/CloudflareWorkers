@@ -1,4 +1,4 @@
-// Current Version: 1.0.2
+// Current Version: 1.0.3
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener("fetch", (event) => {
@@ -12,10 +12,10 @@ async function handleRequest(request) {
     url = url.substr(url.indexOf("/") + 1);
     const ariang_repo = "https://raw.githubusercontent.com/mayswind/AriaNg-DailyBuild/master/";
     const config_secret = "";
-    if (country_code == "CN" || country_code == "SG") {
+    if (country_code === "CN" || country_code === "SG") {
         language = "zh_Hans";
         rpcalias = "演示网站 1";
-    } else if (country_code == "HK" || country_code == "MO" || country_code == "TW") {
+    } else if (country_code === "HK" || country_code === "MO" || country_code === "TW") {
         language = "zh_Hant";
         rpcalias = "演示網站 1";
     } else {
@@ -36,7 +36,7 @@ async function handleRequest(request) {
             protocol = "wss";
             break;
     }
-    if ((config_secret == "" && url == "config") || (config_secret != "" && url == "config=" + config_secret)) {
+    if ((config_secret === "" && url === "config") || (config_secret !== "" && url === "config=" + config_secret)) {
         const server = [
             /* {
                 httpMethod: "GET",
@@ -102,7 +102,7 @@ async function handleRequest(request) {
             },
         });
     } else {
-        if (url == "") {
+        if (url === "") {
             var response = await fetch(ariang_repo + "index.html");
             return new Response(response.body, {
                 status: 200,
@@ -111,11 +111,11 @@ async function handleRequest(request) {
                     "content-type": "text/html;charset=UTF-8",
                 },
             });
-        } else if (url == "index.html") {
+        } else if (url === "index.html") {
             return Response.redirect("https://" + path[0], 301);
         } else {
             var response = await fetch(ariang_repo + url);
-            if (response.status == 200) {
+            if (response.status === 200) {
                 if (url.includes(".css")) {
                     return new Response(response.body, {
                         status: 200,
