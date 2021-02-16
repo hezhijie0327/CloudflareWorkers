@@ -1,4 +1,4 @@
-// Current Version: 1.0.3
+// Current Version: 1.0.4
 // Description: Using Cloudflare Workers to reverse proxy website.
 
 addEventListener("fetch", (event) => {
@@ -35,7 +35,7 @@ async function handleRequest(request) {
         path: "",
         protocol: "https",
     };
-    if (((proxy_config.access.allowed.country.length === 0 || (proxy_config.access.allowed.country.length !== 0 && proxy_config.access.allowed.country.includes(proxy_config.access.current.country))) && (proxy_config.access.allowed.ip.length === 0 || (proxy_config.access.allowed.ip.length !== 0 && proxy_config.access.allowed.ip.includes(proxy_config.access.current.ip))) && (proxy_config.access.blocked.country.length === 0 || (proxy_config.access.blocked.country.length !== 0 && proxy_config.access.blocked.country.includes(proxy_config.access.current.country) === false)) && (proxy_config.access.blocked.ip.length === 0 || (proxy_config.access.blocked.ip.length !== 0 && proxy_config.access.blocked.ip.includes(proxy_config.access.current.ip) === false))) || (proxy_config.access.allowed.country.includes(proxy_config.access.current.country) && proxy_config.access.blocked.country.includes(proxy_config.access.current.country)) || (proxy_config.access.allowed.ip.includes(proxy_config.access.current.ip) && proxy_config.access.blocked.ip.includes(proxy_config.access.current.ip))) {
+    if ((proxy_config.access.allowed.country.length === 0 || (proxy_config.access.allowed.country.length !== 0 && proxy_config.access.allowed.country.includes(proxy_config.access.current.country))) && (proxy_config.access.allowed.ip.length === 0 || (proxy_config.access.allowed.ip.length !== 0 && proxy_config.access.allowed.ip.includes(proxy_config.access.current.ip))) && (proxy_config.access.blocked.country.length === 0 || (proxy_config.access.blocked.country.length !== 0 && (proxy_config.access.blocked.country.includes(proxy_config.access.current.country) === false || (proxy_config.access.allowed.country.includes(proxy_config.access.current.country) && proxy_config.access.blocked.country.includes(proxy_config.access.current.country))))) && (proxy_config.access.blocked.ip.length === 0 || (proxy_config.access.blocked.ip.length !== 0 && (proxy_config.access.blocked.ip.includes(proxy_config.access.current.ip) === false || (proxy_config.access.allowed.ip.includes(proxy_config.access.current.ip) && proxy_config.access.blocked.ip.includes(proxy_config.access.current.ip)))))) {
         const proxy_url = new URL(proxy_config.protocol + "://" + proxy_config.host + "/" + proxy_config.path);
         const request_url = new URL(request.url);
         request_url.protocol = proxy_url.protocol;
