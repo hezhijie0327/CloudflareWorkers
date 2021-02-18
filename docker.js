@@ -1,4 +1,4 @@
-// Current Version: 1.0.3
+// Current Version: 1.0.4
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener("fetch", (event) => {
@@ -24,15 +24,14 @@ async function handleRequest(request) {
         ],
     };
     let url = request.url.substr(8);
-    path = url.split("/");
     url = url.substr(url.indexOf("/") + 1);
+    if (url.includes("/library/")) {
+        var mirror_url = mirror.private.concat(mirror.public);
+    } else {
+        var mirror_url = mirror.public;
+    }
     var response = await fetch("https://registry-1.docker.io/" + url);
-    if (url !== "" && response.status !== 404) {
-        if (path[2] === "library") {
-            var mirror_url = mirror.private.concat(mirror.public);
-        } else {
-            var mirror_url = mirror.public;
-        }
+    if (url !== "" || response.status === 200) {
         return Response.redirect("https://" + mirror_url[Math.floor(Math.random() * mirror_url.length)] + "/" + url, 302);
     } else {
         return new Response("404 Not Found", {
