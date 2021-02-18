@@ -1,4 +1,4 @@
-// Current Version: 1.0.4
+// Current Version: 1.0.5
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener("fetch", (event) => {
@@ -13,22 +13,28 @@ addEventListener("fetch", (event) => {
 });
 
 async function handleRequest(request) {
+    const config = {
+        prefix: {
+            acr_prefix: "acr_prefix", // Alibaba Cloud ACR - https://help.aliyun.com/document_detail/60750.html
+            swr_prefix: "swr_prefix", // Huawei Cloud SWR - https://support.huaweicloud.com/usermanual-swr/swr_01_0045.html
+        },
+    };
     const mirror = {
-        private: [
-            "acr_prefix.mirror.aliyuncs.com", // Alibaba Cloud ACR - https://help.aliyun.com/document_detail/60750.html
-            "swr_prefix.mirror.swr.myhuaweicloud.com", // Huawei Cloud SWR - https://support.huaweicloud.com/usermanual-swr/swr_01_0045.html
-        ],
-        public: [
-            "hub-mirror.c.163.com", // 163 - https://c.163yun.com/hub#/home
-            "mirror.iscas.ac.cn", // ISRC - https://mirror.iscas.ac.cn/mirror/docker.html
-        ],
+        repo_full: {
+            private: [],
+            public: ["mirror.iscas.ac.cn"],
+        },
+        repo_lite: {
+            private: [config.prefix.acr_prefix + ".mirror.aliyuncs.com", config.prefix.swr_prefix + ".mirror.swr.myhuaweicloud.com"],
+            public: ["docker.mirrors.ustc.edu.cn", "hub-mirror.c.163.com"],
+        },
     };
     let url = request.url.substr(8);
     url = url.substr(url.indexOf("/") + 1);
     if (url.includes("/library/")) {
-        var mirror_url = mirror.private.concat(mirror.public);
+        var mirror_url = mirror.repo_full.private.concat(mirror.repo_full.public).concat(mirror.repo_lite.private).concat(mirror.repo_lite.public);
     } else {
-        var mirror_url = mirror.public;
+        var mirror_url = mirror.repo_full.private.concat(mirror.repo_full.public);
     }
     var response = await fetch("https://registry-1.docker.io/" + url);
     if (url !== "" || response.status === 200) {
