@@ -1,5 +1,5 @@
-// Current Version: 1.0.1
-// Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to [acr_prefix].mirror.aliyuncs.com or [swr_prefix].mirror.swr.myhuaweicloud.com.
+// Current Version: 1.0.2
+// Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener("fetch", (event) => {
     const enable_mirror = true;
@@ -13,13 +13,21 @@ addEventListener("fetch", (event) => {
 });
 
 async function handleRequest(request) {
-    const acr_prefix = "acr_prefix"; // Alibaba Cloud ACR - https://help.aliyun.com/document_detail/60750.html
-    const swr_prefix = "swr_prefix"; // Huawei Cloud SWR - https://support.huaweicloud.com/usermanual-swr/swr_01_0045.html
-    const mirror_url = new Array(acr_prefix + ".mirror.aliyuncs.com", swr_prefix + ".mirror.swr.myhuaweicloud.com");
+    const mirror = {
+        private: [
+            "acr_prefix.mirror.aliyuncs.com", // Alibaba Cloud ACR - https://help.aliyun.com/document_detail/60750.html
+            "swr_prefix.mirror.swr.myhuaweicloud.com", // Huawei Cloud SWR - https://support.huaweicloud.com/usermanual-swr/swr_01_0045.html
+        ],
+        public: [
+            "hub-mirror.c.163.com", // 163 - https://c.163yun.com/hub#/home
+            "mirror.iscas.ac.cn", // ISRC - https://mirror.iscas.ac.cn/mirror/docker.html
+        ],
+    };
+    var mirror_url = mirror.private.concat(mirror.public);
     let url = request.url.substr(8);
     url = url.substr(url.indexOf("/") + 1);
     var response = await fetch("https://registry-1.docker.io/" + url);
-    if (url !== "" && response.status === 200) {
+    if (url !== "" && response.status !== 404) {
         return Response.redirect("https://" + mirror_url[Math.floor(Math.random() * mirror_url.length)] + "/" + url, 302);
     } else {
         return new Response("404 Not Found", {
