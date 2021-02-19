@@ -1,4 +1,4 @@
-// Current Version: 1.0.4
+// Current Version: 1.0.5
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener("fetch", (event) => {
@@ -126,7 +126,7 @@ async function handleRequest(request) {
                         },
                     });
                 } else {
-                    if (response.headers.get("Content-Length") <= 64 * 1024) {
+                    if (response.headers.get("Content-Length") <= Math.pow(2, 17)) {
                         if (url.includes(".css")) {
                             return new Response(response.body, {
                                 status: 200,
