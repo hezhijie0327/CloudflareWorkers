@@ -1,9 +1,9 @@
-// Current Version: 1.0.9
+// Current Version: 1.1.0
 // Description: Using Cloudflare Workers to speed up registry.hub.docker.com's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener("fetch", (event) => {
-    const enable_mirror = true;
-    if (enable_mirror === false) {
+    const clone_mode = false;
+    if (clone_mode === true) {
         let url = new URL(event.request.url);
         url.host = "registry.hub.docker.com";
         event.respondWith(fetch(new Request(url, event.request)));
