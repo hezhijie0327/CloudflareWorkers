@@ -1,4 +1,4 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener("fetch", (event) => {
@@ -14,29 +14,30 @@ addEventListener("fetch", (event) => {
 
 async function handleRequest(request) {
     const config = {
+        origin: "registry-1.docker.io",
         prefix: {
             acr_prefix: "acr_prefix", // Alibaba Cloud ACR - https://help.aliyun.com/document_detail/60750.html
             swr_prefix: "swr_prefix", // Huawei Cloud SWR - https://support.huaweicloud.com/usermanual-swr/swr_01_0045.html
         },
     };
     const mirror = {
-        repo_full: {
-            private: [],
-            public: ["mirror.iscas.ac.cn"],
-        },
-        repo_lite: {
+        library: {
             private: [config.prefix.acr_prefix + ".mirror.aliyuncs.com", config.prefix.swr_prefix + ".mirror.swr.myhuaweicloud.com"],
             public: ["docker.mirrors.ustc.edu.cn", "hub-mirror.c.163.com"],
+        },
+        repo: {
+            private: [],
+            public: ["docker.mirrors.sjtug.sjtu.edu.cn", "mirror.iscas.ac.cn"],
         },
     };
     let url = request.url.substr(8);
     url = url.substr(url.indexOf("/") + 1);
     if (url.includes("/library/")) {
-        var mirror_url = mirror.repo_full.private.concat(mirror.repo_full.public).concat(mirror.repo_lite.private).concat(mirror.repo_lite.public);
+        var mirror_url = mirror.library.private.concat(mirror.library.public).concat(mirror.repo.private).concat(mirror.repo.public);
     } else {
-        var mirror_url = mirror.repo_full.private.concat(mirror.repo_full.public);
+        var mirror_url = mirror.repo.private.concat(mirror.repo.public);
     }
-    var response = await fetch("https://registry-1.docker.io/" + url);
+    var response = await fetch("https://" + config.origin + "/" + url);
     if (url !== "" || response.status === 200) {
         return Response.redirect("https://" + mirror_url[Math.floor(Math.random() * mirror_url.length)] + "/" + url, 302);
     } else {
