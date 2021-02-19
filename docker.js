@@ -1,4 +1,4 @@
-// Current Version: 1.0.6
+// Current Version: 1.0.7
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener("fetch", (event) => {
@@ -14,7 +14,6 @@ addEventListener("fetch", (event) => {
 
 async function handleRequest(request) {
     const config = {
-        origin: "registry-1.docker.io",
         prefix: {
             acr_prefix: "acr_prefix", // Alibaba Cloud ACR - https://help.aliyun.com/document_detail/60750.html
             swr_prefix: "swr_prefix", // Huawei Cloud SWR - https://support.huaweicloud.com/usermanual-swr/swr_01_0045.html
@@ -37,9 +36,10 @@ async function handleRequest(request) {
     } else {
         var mirror_url = mirror.repo.private.concat(mirror.repo.public);
     }
-    var response = await fetch("https://" + config.origin + "/" + url);
-    if (url !== "" || response.status === 200) {
-        return Response.redirect("https://" + mirror_url[Math.floor(Math.random() * mirror_url.length)] + "/" + url, 302);
+    var redirect = mirror_url[Math.floor(Math.random() * mirror_url.length)];
+    var response = await fetch("https://" + redirect + "/" + url);
+    if (url !== "" && response.status === 200) {
+        return Response.redirect("https://" + redirect + "/" + url, 302);
     } else {
         return new Response("404 Not Found", {
             status: 404,
