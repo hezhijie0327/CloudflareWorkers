@@ -1,5 +1,5 @@
-// Current Version: 1.0.8
-// Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
+// Current Version: 1.0.9
+// Description: Using Cloudflare Workers to speed up registry.hub.docker.com's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener("fetch", (event) => {
     const enable_mirror = true;
