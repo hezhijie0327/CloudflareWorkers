@@ -1,4 +1,4 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to speed up github.com's visting.
 
 addEventListener("fetch", (event) => {
@@ -21,10 +21,11 @@ async function handleRequest(request) {
     path = url.split("/");
     url = url.substr(url.indexOf("/") + 1);
     if (url.startsWith("https://")) {
-        return Response.redirect("https://" + path[0] + "/" + url.replace(/^https\:\/\/(desktop\.githubusercontent\.com|github\-releases\.githubusercontent\.com|github\.com|raw\.githubusercontent\.com|user\-images\.githubusercontent\.com)\//gim, ""), 301);
+        return Response.redirect("https://" + path[0] + "/" + url.replace(/^https\:\/\/(codeload\.github\.com|desktop\.githubusercontent\.com|github\-releases\.githubusercontent\.com|github\.com|raw\.githubusercontent\.com|user\-images\.githubusercontent\.com)\//gim, ""), 301);
     }
     var response = "";
     var response_archive_blob_clone_edit_raw_release = await fetch("https://github.com/" + url);
+    var response_codeload = await fetch("https://codeload.github.com/" + url);
     var response_desktop = await fetch("https://desktop.githubusercontent.com/" + url);
     var response_image = await fetch("https://user-images.githubusercontent.com/" + url);
     var response_raw = await fetch("https://raw.githubusercontent.com/" + url);
@@ -50,6 +51,8 @@ async function handleRequest(request) {
                 return Response.redirect("https://" + url, 301);
             }
         }
+    } else if (response_codeload.status === 200) {
+        response = response_codeload;
     } else if (response_desktop.status === 200) {
         response = response_desktop;
     } else if (response_image.status === 200) {
