@@ -1,4 +1,4 @@
-// Current Version: 1.0.6
+// Current Version: 1.0.7
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener("fetch", (event) => {
@@ -13,7 +13,7 @@ async function handleRequest(request) {
     const ariang_mirror_repo = "https://cdn.jsdelivr.net/gh/mayswind/AriaNg-DailyBuild@master/";
     const ariang_origin_repo = "https://raw.githubusercontent.com/mayswind/AriaNg-DailyBuild/master/";
     const config_secret = "";
-    const enable_mirror = false;
+    const forced_mirror = false;
     if (country_code === "CN" || country_code === "SG") {
         language = "zh_Hans";
         rpcalias = "演示网站 1";
@@ -127,7 +127,7 @@ async function handleRequest(request) {
                         },
                     });
                 } else {
-                    if (enable_mirror === false && response.headers.get("Content-Length") <= Math.pow(2, 18)) {
+                    if (forced_mirror === false && response.headers.get("Content-Length") <= Math.pow(2, 18)) {
                         if (url.includes(".css")) {
                             return new Response(response.body, {
                                 status: 200,
