@@ -1,4 +1,4 @@
-// Current Version: 1.0.7
+// Current Version: 1.0.8
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener("fetch", (event) => {
@@ -13,7 +13,6 @@ async function handleRequest(request) {
     const ariang_mirror_repo = "https://cdn.jsdelivr.net/gh/mayswind/AriaNg-DailyBuild@master/";
     const ariang_origin_repo = "https://raw.githubusercontent.com/mayswind/AriaNg-DailyBuild/master/";
     const config_secret = "";
-    const forced_mirror = false;
     if (country_code === "CN" || country_code === "SG") {
         language = "zh_Hans";
         rpcalias = "演示网站 1";
@@ -127,104 +126,7 @@ async function handleRequest(request) {
                         },
                     });
                 } else {
-                    if (forced_mirror === false && response.headers.get("Content-Length") <= Math.pow(2, 18)) {
-                        if (url.includes(".css")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "text/css;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".eot")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "application/vnd.ms-fontobject;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".ico")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "image/x-icon;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".js")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "text/javascript;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".manifest")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "text/cache-manifest;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".png")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "image/png;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".svg")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "image/svg+xml;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".ttf")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "font/ttf;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".txt")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "text/plain;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".woff")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "font/woff;charset=UTF-8",
-                                },
-                            });
-                        } else if (url.includes(".woff2")) {
-                            return new Response(response.body, {
-                                status: 200,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                    "content-type": "font/woff2;charset=UTF-8",
-                                },
-                            });
-                        } else {
-                            return new Response(response.body, {
-                                status: response.status,
-                                headers: response.headers,
-                            });
-                        }
-                    } else {
-                        return Response.redirect(ariang_mirror_repo + url, 301);
-                    }
+                    return Response.redirect(ariang_mirror_repo + url, 301);
                 }
             } else {
                 return new Response("404 Not Found", {
