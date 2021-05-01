@@ -1,4 +1,4 @@
-// Current Version: 1.0.8
+// Current Version: 1.0.9
 // Description: Using Cloudflare Workers to speed up github.com's visting.
 
 addEventListener("fetch", (event) => {
@@ -23,11 +23,12 @@ async function handleRequest(request) {
     var response = "";
     if (url !== "") {
         if (url.startsWith("https://")) {
-            return Response.redirect("https://" + path[0] + "/" + url.replace(/^https\:\/\/(((?:codeload)?(?:\.)?github\.com)|(?:desktop|github\-releases|raw|user\-images)?(?:\.)?(githubusercontent\.com))\//gim, ""), 301);
+            return Response.redirect("https://" + path[0] + "/" + url.replace(/^https\:\/\/(((?:codeload|gist)?(?:\.)?github\.com)|(?:desktop|gist|github\-releases|raw|user\-images)?(?:\.)?(githubusercontent\.com))\//gim, ""), 301);
         }
         var response_archive_blob_clone_edit_raw_release = await fetch("https://github.com/" + url);
         var response_codeload = await fetch("https://codeload.github.com/" + url);
         var response_desktop = await fetch("https://desktop.githubusercontent.com/" + url);
+        var response_gist = await fetch("https://gist.githubusercontent.com/" + url);
         var response_image = await fetch("https://user-images.githubusercontent.com/" + url);
         var response_raw = await fetch("https://raw.githubusercontent.com/" + url);
         var response_release = await fetch("https://github-releases.githubusercontent.com/" + url);
@@ -56,6 +57,10 @@ async function handleRequest(request) {
             response = response_codeload;
         } else if (response_desktop.status === 200) {
             response = response_desktop;
+        } else if (response_gist.status === 200) {
+            if (path[3] === "raw") {
+                response = response_gist;
+            }
         } else if (response_image.status === 200) {
             response = response_image;
         } else if (response_raw.status === 200) {
