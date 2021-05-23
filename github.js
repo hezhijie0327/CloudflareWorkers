@@ -1,4 +1,4 @@
-// Current Version: 1.0.9
+// Current Version: 1.1.0
 // Description: Using Cloudflare Workers to speed up github.com's visting.
 
 addEventListener("fetch", (event) => {
@@ -38,7 +38,18 @@ async function handleRequest(request) {
                 var redirect = mirror_url[Math.floor(Math.random() * mirror_url.length)];
                 return Response.redirect("https://" + redirect + "/" + url, 302);
             } else {
-                if (path[3] === "archive" || (path[3] === "releases" && path[4] === "download")) {
+                if (path[3] === "archive") {
+                    for (var i = 0; i < path.length; i++) {
+                        if (i === 0) {
+                            url = path[i];
+                        } else if (i === 3) {
+                            url = url + "/zip";
+                        } else {
+                            url = url + "/" + path[i];
+                        }
+                    }
+                    return Response.redirect("https://" + url.replace(/\.zip$/gim, ""), 301);
+                } else if (path[3] === "releases" && path[4] === "download") {
                     response = response_archive_blob_clone_edit_raw_release;
                 } else if (path[3] === "blob" || path[3] === "edit" || path[3] === "raw") {
                     for (var i = 0; i < path.length; i++) {
