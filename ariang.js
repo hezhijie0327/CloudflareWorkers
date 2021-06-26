@@ -1,4 +1,4 @@
-// Current Version: 1.1.0
+// Current Version: 1.1.1
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener("fetch", (event) => {
@@ -77,7 +77,7 @@ async function handleRequest(request) {
             dragAndDropTasks: true,
             extendRpcServers: server,
             fileListDisplayOrder: "default:asc",
-            globalStatRefreshInterval: 5000,
+            globalStatRefreshInterval: 1000,
             httpMethod: method,
             includePrefixWhenCopyingFromTaskDetails: true,
             language: language,
