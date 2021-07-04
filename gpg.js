@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to backup your GPG key.
 
 addEventListener("fetch", (event) => {
@@ -8,25 +8,23 @@ addEventListener("fetch", (event) => {
 async function handleRequest(request) {
     let url = request.url.substr(8);
     url = url.substr(url.indexOf("/") + 1);
-    const gpg_info = {
-        public_key: "",
-        private_key: "",
-        secret_key: "",
+    const gpg = {
+        info: {
+            private: "gpg --import --pinentry-mode loopback --batch --passphrase <PASSWORD> <PRIVATEKEY>",
+            public: "gpg --import <PUBLICKEY>",
+        },
+        key: {
+            private: atob(""),
+            public: atob(""),
+        },
+        password: btoa(""),
     };
-    if (url === "public") {
-        return new Response(atob(gpg_info.public_key), {
+    if (url === "secret=" + atob(gpg.password)) {
+        return new Response(JSON.stringify(gpg, null, 2), {
             status: 200,
             headers: {
                 "Access-Control-Allow-Origin": "*",
-                "content-type": "text/plain;charset=UTF-8",
-            },
-        });
-    } else if (url === "private=" + gpg_info.secret_key) {
-        return new Response(atob(gpg_info.private_key), {
-            status: 200,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "content-type": "text/plain;charset=UTF-8",
+                "content-type": "application/json;charset=UTF-8",
             },
         });
     } else {
