@@ -1,4 +1,4 @@
-// Current Version: 1.1.1
+// Current Version: 1.1.2
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener("fetch", (event) => {
@@ -12,7 +12,7 @@ async function handleRequest(request) {
     url = url.substr(url.indexOf("/") + 1);
     const ariang_mirror_repo = "https://cdn.jsdelivr.net/gh/mayswind/AriaNg-DailyBuild@master/";
     const ariang_origin_repo = "https://raw.githubusercontent.com/mayswind/AriaNg-DailyBuild/master/";
-    const config_secret = "";
+    const config_secret = btoa("");
     if (country_code === "CN" || country_code === "SG") {
         language = "zh_Hans";
         rpcalias = "演示网站 1";
@@ -37,7 +37,7 @@ async function handleRequest(request) {
             protocol = "wss";
             break;
     }
-    if ((config_secret === "" && url === "config") || (config_secret !== "" && url === "config=" + config_secret)) {
+    if ((config_secret === "" && url === "config") || (config_secret !== "" && url === "config=" + atob(config_secret))) {
         const server = [
             /* {
                 httpMethod: "GET",
