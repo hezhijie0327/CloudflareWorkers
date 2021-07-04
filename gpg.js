@@ -1,4 +1,4 @@
-// Current Version: 1.0.6
+// Current Version: 1.0.7
 // Description: Using Cloudflare Workers to backup your GPG key.
 
 addEventListener("fetch", (event) => {
@@ -18,9 +18,9 @@ async function handleRequest(request) {
             private: "",
             public: "",
         },
-        secret: "",
+        secret: btoa(""),
     };
-    if (url === "secret=" + atob(gpg.secret) || url === "secret=" + gpg.secret) {
+    if (url === "secret=" + atob(gpg.secret)) {
         return new Response(JSON.stringify(gpg, null, 2), {
             status: 200,
             headers: {
