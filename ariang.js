@@ -1,4 +1,4 @@
-// Current Version: 1.1.2
+// Current Version: 1.1.3
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener("fetch", (event) => {
@@ -10,8 +10,7 @@ async function handleRequest(request) {
     let url = request.url.substr(8);
     path = url.split("/");
     url = url.substr(url.indexOf("/") + 1);
-    const ariang_mirror_repo = "https://cdn.jsdelivr.net/gh/mayswind/AriaNg-DailyBuild@master/";
-    const ariang_origin_repo = "https://raw.githubusercontent.com/mayswind/AriaNg-DailyBuild/master/";
+    const ariang_repo = "https://raw.githubusercontent.com/mayswind/AriaNg-DailyBuild/master/";
     const config_secret = btoa("");
     if (country_code === "CN" || country_code === "SG") {
         language = "zh_Hans";
@@ -37,7 +36,7 @@ async function handleRequest(request) {
             protocol = "wss";
             break;
     }
-    if ((config_secret === "" && url === "config") || (config_secret !== "" && url === "config=" + atob(config_secret))) {
+    if ((config_secret === "" && url === "config.json") || (config_secret !== "" && url === atob(config_secret) + "/config.json")) {
         const server = [
             /* {
                 httpMethod: "GET",
@@ -105,7 +104,9 @@ async function handleRequest(request) {
         });
     } else {
         if (url === "") {
-            var response = await fetch(ariang_origin_repo + "index.html");
+            return Response.redirect("https://" + path[0] + "/index.html", 301);
+        } else if (url === "index.html") {
+            var response = await fetch(ariang_repo + "index.html");
             return new Response(response.body, {
                 status: 200,
                 headers: {
@@ -113,12 +114,26 @@ async function handleRequest(request) {
                     "content-type": "text/html;charset=UTF-8",
                 },
             });
-        } else if (url === "index.html") {
-            return Response.redirect("https://" + path[0], 301);
         } else {
-            var response = await fetch(ariang_origin_repo + url);
+            var response = await fetch(ariang_repo + url);
             if (response.status === 200) {
-                if (url.includes(".html")) {
+                if (url.includes(".css")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "text/css;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".eot")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "application/vnd.ms-fontobject;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".html")) {
                     return new Response(response.body, {
                         status: 200,
                         headers: {
@@ -126,8 +141,83 @@ async function handleRequest(request) {
                             "content-type": "text/html;charset=UTF-8",
                         },
                     });
+                } else if (url.includes(".ico")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "image/x-icon;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".js")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "text/javascript;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".manifest")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "text/cache-manifest;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".png")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "image/png;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".svg")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "image/svg+xml;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".ttf")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "font/ttf;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".txt")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "text/plain;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".woff")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "font/woff;charset=UTF-8",
+                        },
+                    });
+                } else if (url.includes(".woff2")) {
+                    return new Response(response.body, {
+                        status: 200,
+                        headers: {
+                            "Access-Control-Allow-Origin": "*",
+                            "content-type": "font/woff2;charset=UTF-8",
+                        },
+                    });
                 } else {
-                    return Response.redirect(ariang_mirror_repo + url, 301);
+                    return new Response(response.body, {
+                        status: response.status,
+                        headers: response.headers,
+                    });
                 }
             } else {
                 return new Response("404 Not Found", {
