@@ -1,4 +1,4 @@
-// Current Version: 1.0.0
+// Current Version: 1.0.1
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting.
 
 addEventListener( 'fetch', e =>
@@ -62,9 +62,9 @@ async function fetchHandler ( e )
     let original_text = original_response_clone.body
     let replace_response_headers = new Headers( original_response_headers )
 
-    if ( replace_response_headers.get( "Www-Authenticate" ) )
+    if ( replace_response_headers.get( "WWW-Authenticate" ) )
     {
-        replace_response_headers.set( "Www-Authenticate", original_response_headers.get( "Www-Authenticate" ).replace( new RegExp( 'https://auth.docker.io', 'g' ), 'https://' + workers_url[ 0 ] ) )
+        replace_response_headers.set( "WWW-Authenticate", original_response_headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://auth.docker.io', 'g' ), 'https://' + workers_url[ 0 ] ) )
     }
 
     if ( replace_response_headers.get( "Location" ) )
