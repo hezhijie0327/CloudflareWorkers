@@ -1,4 +1,4 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to reverse proxy website.
 
 addEventListener( "fetch", ( event ) =>
@@ -37,6 +37,7 @@ async function handleRequest ( request )
         path: "",
         protocol: "https",
     }
+
     if ( ( proxy_config.access.allowed.country.length === 0 || ( proxy_config.access.allowed.country.length !== 0 && proxy_config.access.allowed.country.includes( proxy_config.access.current.country ) ) ) && ( proxy_config.access.allowed.ip.length === 0 || ( proxy_config.access.allowed.ip.length !== 0 && proxy_config.access.allowed.ip.includes( proxy_config.access.current.ip ) ) ) && ( proxy_config.access.blocked.country.length === 0 || ( proxy_config.access.blocked.country.length !== 0 && ( proxy_config.access.blocked.country.includes( proxy_config.access.current.country ) === false || ( proxy_config.access.allowed.country.includes( proxy_config.access.current.country ) && proxy_config.access.blocked.country.includes( proxy_config.access.current.country ) ) ) ) ) && ( proxy_config.access.blocked.ip.length === 0 || ( proxy_config.access.blocked.ip.length !== 0 && ( proxy_config.access.blocked.ip.includes( proxy_config.access.current.ip ) === false || ( proxy_config.access.allowed.ip.includes( proxy_config.access.current.ip ) && proxy_config.access.blocked.ip.includes( proxy_config.access.current.ip ) ) ) ) ) )
     {
         const proxy_url = new URL( proxy_config.protocol + "://" + proxy_config.host + "/" + proxy_config.path )
@@ -44,6 +45,7 @@ async function handleRequest ( request )
         request_url.protocol = proxy_url.protocol
         request_url.host = proxy_url.host
         request_url.pathname = proxy_url.pathname + request_url.pathname
+
         var proxy_response = await fetch(
             new Request( request_url, {
                 cf: {
@@ -60,6 +62,7 @@ async function handleRequest ( request )
                 method: request.method,
             } )
         )
+
         return new Response( proxy_response.body, {
             status: proxy_response.status,
             headers: proxy_response.headers,
