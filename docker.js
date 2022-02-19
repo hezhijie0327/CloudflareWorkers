@@ -1,18 +1,10 @@
-// Current Version: 1.1.1
+// Current Version: 1.1.2
 // Description: Using Cloudflare Workers to speed up registry.hub.docker.com's visting or randomly redirect to Docker Hub's mirrors(private or public) in China.
 
 addEventListener( "fetch", ( event ) =>
 {
-    const clone_mode = false
-    if ( clone_mode === true )
-    {
-        let url = new URL( event.request.url )
-        url.host = "registry.hub.docker.com"
-        event.respondWith( fetch( new Request( url, event.request ) ) )
-    } else
-    {
-        event.respondWith( handleRequest( event.request ) )
-    }
+    event.respondWith( handleRequest( event.request ) )
+
 } )
 
 async function handleRequest ( request )
@@ -33,8 +25,10 @@ async function handleRequest ( request )
             public: [ "docker.mirrors.sjtug.sjtu.edu.cn", "mirror.iscas.ac.cn" ],
         },
     }
+
     let url = request.url.substr( 8 )
     url = url.substr( url.indexOf( "/" ) + 1 )
+
     if ( url.includes( "/library/" ) )
     {
         var mirror_url = mirror.library.private.concat( mirror.library.public ).concat( mirror.repo.private ).concat( mirror.repo.public )
@@ -42,8 +36,10 @@ async function handleRequest ( request )
     {
         var mirror_url = mirror.repo.private.concat( mirror.repo.public )
     }
+
     var redirect = mirror_url[ Math.floor( Math.random() * mirror_url.length ) ]
     var response = await fetch( "https://" + redirect + "/" + url )
+
     if ( url !== "" && response.status === 200 )
     {
         return Response.redirect( "https://" + redirect + "/" + url, 302 )
