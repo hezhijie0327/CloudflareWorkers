@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to proxy GitHub.
 
 const URL_REGEX = {
@@ -119,6 +119,7 @@ async function proxy ( rawLen, reqInit, urlObj )
     if ( resHdrNew.has( 'Location' ) )
     {
         let _location = resHdrNew.get( 'Location' )
+
         if ( checkUrl( _location ) )
             resHdrNew.set( 'Location', '/' + _location )
         else
