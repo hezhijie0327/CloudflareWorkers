@@ -1,13 +1,14 @@
-// Current Version: 1.0.2
+// Current Version: 1.0.3
 // Description: Using Cloudflare Workers to proxy GitHub.
 
 const URL_REGEX = {
-    exp1: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:releases|archive)\/.*$/i,
-    exp2: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:blob|edit|raw)\/.*$/i,
-    exp3: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:info|git-).*$/i,
-    exp4: /^(?:https?:\/\/)?raw\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+?\/.+$/i,
-    exp5: /^(?:https?:\/\/)?gist\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+$/i,
-    exp6: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/tags.*$/i
+    regex_0: /^(?:https?:\/\/)?(((?:codeload|gist)?(?:\.)?github\.com)|(?:desktop|gist|github\-releases|raw|user\-images)?(?:\.)?(githubusercontent\.com))\/.*$/i,
+    regex_1: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:releases|archive)\/.*$/i,
+    regex_2: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:blob|edit|raw)\/.*$/i,
+    regex_3: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:info|git-).*$/i,
+    regex_4: /^(?:https?:\/\/)?raw\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+?\/.+$/i,
+    regex_5: /^(?:https?:\/\/)?gist\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+$/i,
+    regex_6: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/tags.*$/i
 }
 
 addEventListener( 'fetch', e =>
@@ -36,7 +37,7 @@ function newUrl ( urlStr )
 
 function checkUrl ( u )
 {
-    for ( let i of [ URL_REGEX.exp1, URL_REGEX.exp2, URL_REGEX.exp3, URL_REGEX.exp4, URL_REGEX.exp5, URL_REGEX.exp6 ] )
+    for ( let i of [ URL_REGEX.regex_0, URL_REGEX.regex_1, URL_REGEX.regex_2, URL_REGEX.regex_3, URL_REGEX.regex_4, URL_REGEX.regex_5, URL_REGEX.regex_6 ] )
     {
         if ( u.search( i ) === 0 )
         {
@@ -61,10 +62,10 @@ async function fetchHandler ( e )
 
     path = urlObj.href.substr( urlObj.origin.length + 1 ).replace( /^https?:\/+/, 'https://' )
 
-    if ( path.search( URL_REGEX.exp1 ) === 0 || path.search( URL_REGEX.exp5 ) === 0 || path.search( URL_REGEX.exp6 ) === 0 || path.search( URL_REGEX.exp3 ) === 0 || path.search( URL_REGEX.exp4 ) === 0 )
+    if ( path.search( URL_REGEX.regex_1 ) === 0 || path.search( URL_REGEX.regex_5 ) === 0 || path.search( URL_REGEX.regex_6 ) === 0 || path.search( URL_REGEX.regex_3 ) === 0 || path.search( URL_REGEX.regex_4 ) === 0 || path.search( URL_REGEX.regex_0 ) === 0 )
     {
         return httpHandler( req, path )
-    } else if ( path.search( URL_REGEX.exp2 ) === 0 )
+    } else if ( path.search( URL_REGEX.regex_2 ) === 0 )
     {
         return httpHandler( req, path.replace( /\/(blob|edit)\//, '/raw/' ) )
     } else
