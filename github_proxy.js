@@ -1,4 +1,4 @@
-// Current Version: 1.0.8
+// Current Version: 1.0.9
 // Description: Using Cloudflare Workers to proxy GitHub.
 
 const URL_REGEX = {
@@ -64,10 +64,13 @@ async function fetchHandler ( e )
 
     if ( path.search( URL_REGEX.regex_1 ) === 0 || path.search( URL_REGEX.regex_5 ) === 0 || path.search( URL_REGEX.regex_6 ) === 0 || path.search( URL_REGEX.regex_3 ) === 0 || path.search( URL_REGEX.regex_4 ) === 0 || path.search( URL_REGEX.regex_0 ) === 0 )
     {
-        return httpHandler( req, path )
-    } else if ( path.search( URL_REGEX.regex_2 ) === 0 )
-    {
-        return httpHandler( req, path.replace( /\/(blob|edit)\//, '/raw/' ) )
+        if ( path.search( URL_REGEX.regex_2 ) === 0 )
+        {
+            return httpHandler( req, path.replace( /\/(blob|edit)\//, '/raw/' ) )
+        } else
+        {
+            return httpHandler( req, path )
+        }
     } else
     {
         return new Response( "403 Forbidden", {
