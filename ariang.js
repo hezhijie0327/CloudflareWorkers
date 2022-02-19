@@ -1,4 +1,4 @@
-// Current Version: 1.1.4
+// Current Version: 1.1.5
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener( "fetch", ( event ) =>
@@ -8,71 +8,46 @@ addEventListener( "fetch", ( event ) =>
 
 async function handleRequest ( request )
 {
-    let country_code = request.headers.get( "CF-IPCountry" )
-    let url = request.url.substr( 8 )
-    path = url.split( "/" )
-    url = url.substr( url.indexOf( "/" ) + 1 )
     const ariang_repo = "https://raw.githubusercontent.com/mayswind/AriaNg-DailyBuild/master/"
     const config_secret = btoa( "" )
+
+    let country_code = request.headers.get( "CF-IPCountry" )
+    let url = request.url.substr( 8 )
+    let path = url.split( "/" )
+    url = url.substr( url.indexOf( "/" ) + 1 )
+
     if ( country_code === "CN" || country_code === "SG" )
     {
-        language = "zh_Hans"
-        rpcalias = "演示网站 1"
+        var language = "zh_Hans"
+        var rpcalias = "演示网站 1"
     } else if ( country_code === "HK" || country_code === "MO" || country_code === "TW" )
     {
-        language = "zh_Hant"
-        rpcalias = "演示網站 1"
+        var language = "zh_Hant"
+        var rpcalias = "演示網站 1"
     } else
     {
-        language = "en"
-        rpcalias = "Demo Site 1"
+        var language = "en"
+        var rpcalias = "Demo Site 1"
     }
+
     switch ( Math.floor( Math.random() * 3 ) )
     {
         case 0:
-            method = "GET"
-            protocol = "https"
+            var method = "GET"
+            var protocol = "https"
             break
         case 1:
-            method = "POST"
-            protocol = "https"
+            var method = "POST"
+            var protocol = "https"
             break
         case 2:
-            method = ""
-            protocol = "wss"
+            var method = ""
+            var protocol = "wss"
             break
     }
+
     if ( ( config_secret === "" && url === "config.json" ) || ( config_secret !== "" && url === atob( config_secret ) + "/config.json" ) )
     {
-        const server = [
-            /* {
-                httpMethod: "GET",
-                protocol: "https",
-                rpcAlias: "",
-                rpcHost: "",
-                rpcInterface: "jsonrpc",
-                rpcPort: "6800",
-                secret: btoa(""),
-            },
-            {
-                httpMethod: "POST",
-                protocol: "https",
-                rpcAlias: "",
-                rpcHost: "",
-                rpcInterface: "jsonrpc",
-                rpcPort: "6800",
-                secret: btoa(""),
-            },
-            {
-                httpMethod: "",
-                protocol: "wss",
-                rpcAlias: "",
-                rpcHost: "",
-                rpcInterface: "jsonrpc",
-                rpcPort: "6800",
-                secret: btoa(""),
-            }, */
-        ]
         const config = {
             afterCreatingNewTask: "task-list",
             afterRetryingTask: "task-list-downloading",
@@ -81,7 +56,35 @@ async function handleRequest ( request )
             displayOrder: "default:asc",
             downloadTaskRefreshInterval: 1000,
             dragAndDropTasks: true,
-            extendRpcServers: server,
+            extendRpcServers: [
+                /* {
+                    httpMethod: "GET",
+                    protocol: "https",
+                    rpcAlias: "",
+                    rpcHost: "",
+                    rpcInterface: "jsonrpc",
+                    rpcPort: "6800",
+                    secret: btoa(""),
+                },
+                {
+                    httpMethod: "POST",
+                    protocol: "https",
+                    rpcAlias: "",
+                    rpcHost: "",
+                    rpcInterface: "jsonrpc",
+                    rpcPort: "6800",
+                    secret: btoa(""),
+                },
+                {
+                    httpMethod: "",
+                    protocol: "wss",
+                    rpcAlias: "",
+                    rpcHost: "",
+                    rpcInterface: "jsonrpc",
+                    rpcPort: "6800",
+                    secret: btoa(""),
+                }, */
+            ],
             fileListDisplayOrder: "default:asc",
             globalStatRefreshInterval: 1000,
             httpMethod: method,
@@ -102,6 +105,7 @@ async function handleRequest ( request )
             title: "${title} - ${rpcprofile}",
             titleRefreshInterval: 0,
         }
+
         return new Response( JSON.stringify( config, null, 2 ), {
             status: 200,
             headers: {
@@ -117,6 +121,7 @@ async function handleRequest ( request )
         } else if ( url === "index.html" )
         {
             var response = await fetch( ariang_repo + "index.html" )
+
             return new Response( response.body, {
                 status: 200,
                 headers: {
@@ -127,6 +132,7 @@ async function handleRequest ( request )
         } else
         {
             var response = await fetch( ariang_repo + url )
+
             if ( response.status === 200 )
             {
                 if ( url.includes( ".css" ) )
