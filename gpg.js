@@ -1,4 +1,4 @@
-// Current Version: 1.1.4
+// Current Version: 1.1.5
 // Description: Using Cloudflare Workers to backup your GPG key.
 
 addEventListener( "fetch", ( event ) =>
@@ -8,9 +8,6 @@ addEventListener( "fetch", ( event ) =>
 
 async function handleRequest ( request )
 {
-    let url = request.url.substr( 8 )
-    path = url.split( "/" )
-    url = url.substr( url.indexOf( "/" ) + 1 )
     const gpg = {
         info: {
             private: "curl -fsSL 'https://" + path[ 0 ] + "/" + url + "' | jq -r '.key.private' | base64 -d | gpg --batch --import --passphrase '<PASSWORD>'",
@@ -23,6 +20,11 @@ async function handleRequest ( request )
         },
         secret: btoa( "" ),
     }
+
+    let url = request.url.substr( 8 )
+    let path = url.split( "/" )
+    url = url.substr( url.indexOf( "/" ) + 1 )
+
     if ( url === atob( gpg.secret ) + "/import.json" )
     {
         return new Response( JSON.stringify( gpg, null, 2 ), {
