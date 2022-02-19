@@ -1,4 +1,4 @@
-// Current Version: 1.0.7
+// Current Version: 1.0.8
 // Description: Using Cloudflare Workers to proxy GitHub.
 
 const URL_REGEX = {
@@ -60,7 +60,7 @@ async function fetchHandler ( e )
         return Response.redirect( 'https://' + urlObj.host + '/' + path, 301 )
     }
 
-    path = urlObj.href.substr( urlObj.origin.length + 1 ).replace( /^https?:\/+/, 'https://' )
+    path = urlObj.href.substring( urlObj.origin.length + 1 ).replace( /^https?:\/+/, 'https://' )
 
     if ( path.search( URL_REGEX.regex_1 ) === 0 || path.search( URL_REGEX.regex_5 ) === 0 || path.search( URL_REGEX.regex_6 ) === 0 || path.search( URL_REGEX.regex_3 ) === 0 || path.search( URL_REGEX.regex_4 ) === 0 || path.search( URL_REGEX.regex_0 ) === 0 )
     {
