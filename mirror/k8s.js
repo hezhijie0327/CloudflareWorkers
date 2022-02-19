@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to speed up k8s.gcr.io's visting.
 
 addEventListener( 'fetch', e =>
@@ -62,30 +62,26 @@ async function fetchHandler ( e )
         parameter.headers.Authorization = getReqHeader( "Authorization" )
     }
 
-    let original_response = await fetch( new Request( url, e.request ), parameter )
-    let original_response_clone = original_response.clone()
-    let original_response_headers = original_response.headers
-    let original_status = original_response.status
-    let original_text = original_response_clone.body
-    let replace_response_headers = new Headers( original_response_headers )
+    let response = await fetch( new Request( url, e.request ), parameter )
+    let temp_headers = new Headers( response.headers )
 
-    if ( replace_response_headers.get( "WWW-Authenticate" ) )
+    if ( temp_headers.get( "WWW-Authenticate" ) )
     {
-        replace_response_headers.set( "WWW-Authenticate", original_response_headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://k8s.gcr.io', 'g' ), 'https://' + workers_url[ 0 ] ) )
+        temp_headers.set( "WWW-Authenticate", response.headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://k8s.gcr.io', 'g' ), 'https://' + workers_url[ 0 ] ) )
     }
 
-    if ( replace_response_headers.get( "Location" ) )
+    if ( temp_headers.get( "Location" ) )
     {
-        return httpHandler( e.request, replace_response_headers.get( "Location" ) )
+        return httpHandler( e.request, temp_headers.get( "Location" ) )
     }
 
-    replace_response_headers.set( 'Access-Control-Allow-Headers', "Authorization, Cache-Control, Content-Type, DNT, If-Modified-Since, Keep-Alive, User-Agent, X-CustomHeader, X-Requested-With" )
-    replace_response_headers.set( 'Access-Control-Allow-Methods', 'DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT' )
-    replace_response_headers.set( 'Access-Control-Allow-Origin', '*' )
+    temp_headers.set( 'Access-Control-Allow-Headers', "Authorization, Cache-Control, Content-Type, DNT, If-Modified-Since, Keep-Alive, User-Agent, X-CustomHeader, X-Requested-With" )
+    temp_headers.set( 'Access-Control-Allow-Methods', 'DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT' )
+    temp_headers.set( 'Access-Control-Allow-Origin', '*' )
 
-    return new Response( original_text, {
-        status: original_status,
-        headers: replace_response_headers
+    return new Response( response.body, {
+        status: response.status,
+        headers: temp_headers
     } )
 
 }
