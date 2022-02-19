@@ -1,8 +1,8 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to proxy GitHub.
 
 const URL_REGEX = {
-    regex_0: /^(?:https?:\/\/)?(((?:central|codeload|gist)?(?:\.)?github\.com)|(?:desktop|gist|github\-releases|raw|user\-images)?(?:\.)?(githubusercontent\.com))\/.*$/i,
+    regex_0: /^(?:https?:\/\/)?(((?:codeload|gist)?(?:\.)?github\.com)|(?:desktop|gist|github\-releases|raw|user\-images)?(?:\.)?(githubusercontent\.com))\/.*$/i,
     regex_1: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:releases|archive)\/.*$/i,
     regex_2: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:blob|edit|raw)\/.*$/i,
     regex_3: /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:info|git-).*$/i,
