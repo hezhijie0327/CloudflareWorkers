@@ -1,4 +1,4 @@
-// Current Version: 1.0.0
+// Current Version: 1.0.1
 // Description: Using Cloudflare Workers to proxy GitHub.
 
 const URL_REGEX = {
@@ -93,13 +93,18 @@ function httpHandler ( req, pathname )
     let rawLen = ''
     let urlStr = pathname
 
+    if ( urlStr.startsWith( 'github' ) )
+    {
+        urlStr = 'https://' + urlStr
+    }
+
     const reqHdrNew = new Headers( reqHdrRaw )
     const urlObj = newUrl( urlStr )
     const reqInit = {
         body: req.body,
         headers: reqHdrNew,
         method: req.method,
-        redirect: 'follow'
+        redirect: 'manual'
     }
 
     return proxy( rawLen, reqInit, urlObj )
@@ -110,6 +115,19 @@ async function proxy ( rawLen, reqInit, urlObj )
     const res = await fetch( urlObj.href, reqInit )
     const resHdrOld = res.headers
     const resHdrNew = new Headers( resHdrOld )
+
+    if ( resHdrNew.has( 'Location' ) )
+    {
+        let _location = resHdrNew.get( 'Location' )
+        if ( checkUrl( _location ) )
+            resHdrNew.set( 'Location', '/' + _location )
+        else
+        {
+            reqInit.redirect = 'follow'
+
+            return proxy( newUrl( _location ), reqInit )
+        }
+    }
 
     if ( rawLen )
     {
