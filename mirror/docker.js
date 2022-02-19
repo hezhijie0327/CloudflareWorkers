@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting.
 
 addEventListener( 'fetch', e =>
@@ -47,7 +47,20 @@ async function fetchHandler ( e )
 
     if ( url.pathname === '/token' )
     {
-        return fetch( new Request( 'https://auth.docker.io' + url.pathname + url.search, e.request ) )
+        let visiting_ip = e.request.headers.get( 'CF-Connecting-IP' )
+
+        if ( visiting_ip === null )
+        {
+            visiting_ip = '127.0.0.1'
+        }
+
+        if ( visiting_ip.search( /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/i ) === 0 )
+        {
+            return fetch( new Request( 'https://auth.docker.io' + url.pathname + url.search, e.request ) )
+        } else
+        {
+            return fetch( new Request( 'https://auth.ipv6.docker.com' + url.pathname + url.search, e.request ) )
+        }
     }
 
     if ( e.request.headers.has( "Authorization" ) )
@@ -64,7 +77,7 @@ async function fetchHandler ( e )
 
     if ( replace_response_headers.get( "WWW-Authenticate" ) )
     {
-        replace_response_headers.set( "WWW-Authenticate", original_response_headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://auth.docker.io', 'g' ), 'https://' + workers_url[ 0 ] ) )
+        replace_response_headers.set( "WWW-Authenticate", original_response_headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://auth.(ipv6.)?docker.(io|com)', 'g' ), 'https://' + workers_url[ 0 ] ) )
     }
 
     if ( replace_response_headers.get( "Location" ) )
