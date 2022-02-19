@@ -1,4 +1,4 @@
-// Current Version: 1.0.3
+// Current Version: 1.0.4
 // Description: Using Cloudflare Workers to speed up fonts.googleapis.com and fonts.gstatic.com's visting.
 
 addEventListener( "fetch", ( event ) =>
@@ -9,10 +9,12 @@ addEventListener( "fetch", ( event ) =>
 async function handleRequest ( request )
 {
     let url = request.url.substr( 8 )
-    path = url.split( "/" )
+    let path = url.split( "/" )
     url = url.substr( url.indexOf( "/" ) + 1 )
+
     var response_css = await fetch( "https://fonts.googleapis.com/" + url )
     var response_font = await fetch( "https://fonts.gstatic.com/" + url )
+
     if ( url === "" || ( response_css.status !== 200 && response_font.status !== 200 ) )
     {
         return new Response( "404 Not Found", {
@@ -26,7 +28,8 @@ async function handleRequest ( request )
     {
         if ( response_css.status === 200 )
         {
-            css = await response_css.text()
+            let css = await response_css.text()
+
             return new Response( css.replace( /fonts\.gstatic\.com/gim, path[ 0 ] ), {
                 status: 200,
                 headers: {
@@ -47,7 +50,7 @@ async function handleRequest ( request )
                 } )
             } else if ( url.includes( ".eot" ) )
             {
-                return new Response( response.body, {
+                return new Response( response_font.body, {
                     status: 200,
                     headers: {
                         "Access-Control-Allow-Origin": "*",
@@ -74,7 +77,7 @@ async function handleRequest ( request )
                 } )
             } else if ( url.includes( ".svg" ) )
             {
-                return new Response( response.body, {
+                return new Response( response_font.body, {
                     status: 200,
                     headers: {
                         "Access-Control-Allow-Origin": "*",
