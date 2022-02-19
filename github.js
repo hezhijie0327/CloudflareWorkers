@@ -1,18 +1,9 @@
-// Current Version: 1.1.3
+// Current Version: 1.1.4
 // Description: Using Cloudflare Workers to speed up github.com's visting.
 
 addEventListener( "fetch", ( event ) =>
 {
-    const clone_mode = false
-    if ( clone_mode === true )
-    {
-        let url = new URL( event.request.url )
-        url.host = "github.com"
-        event.respondWith( fetch( new Request( url, event.request ) ) )
-    } else
-    {
-        event.respondWith( handleRequest( event.request ) )
-    }
+    event.respondWith( handleRequest( event.request ) )
 } )
 
 async function handleRequest ( request )
@@ -21,16 +12,15 @@ async function handleRequest ( request )
         private: [],
         public: [ "gh-proxy.com", "ghproxy.com" ],
     }
+
     let url = request.url.substr( 8 )
     path = url.split( "/" )
     url = url.substr( url.indexOf( "/" ) + 1 )
+
     var response = ""
+
     if ( url !== "" )
     {
-        if ( url.startsWith( "https://" ) )
-        {
-            return Response.redirect( "https://" + path[ 0 ] + "/" + url.replace( /^https\:\/\/(((?:codeload|gist)?(?:\.)?github\.com)|(?:desktop|gist|github\-releases|raw|user\-images)?(?:\.)?(githubusercontent\.com))\//gim, "" ), 301 )
-        }
         var response_archive_blob_clone_edit_raw_release = await fetch( "https://github.com/" + url )
         var response_codeload = await fetch( "https://codeload.github.com/" + url )
         var response_desktop = await fetch( "https://desktop.githubusercontent.com/" + url )
@@ -38,12 +28,19 @@ async function handleRequest ( request )
         var response_image = await fetch( "https://user-images.githubusercontent.com/" + url )
         var response_raw = await fetch( "https://raw.githubusercontent.com/" + url )
         var response_release = await fetch( "https://github-releases.githubusercontent.com/" + url )
+
+        if ( url.startsWith( "https://" ) )
+        {
+            return Response.redirect( "https://" + path[ 0 ] + "/" + url.replace( /^https\:\/\/(((?:codeload|gist)?(?:\.)?github\.com)|(?:desktop|gist|github\-releases|raw|user\-images)?(?:\.)?(githubusercontent\.com))\//gim, "" ), 301 )
+        }
+
         if ( response_archive_blob_clone_edit_raw_release.status === 200 )
         {
             if ( path[ 2 ].endsWith( ".git" ) )
             {
                 var mirror_url = mirror.private.concat( mirror.public )
                 var redirect = mirror_url[ Math.floor( Math.random() * mirror_url.length ) ]
+
                 return Response.redirect( "https://" + redirect + "/https://github.com/" + url, 302 )
             } else
             {
