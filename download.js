@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to proxy download everything.
 
 addEventListener( 'fetch', e =>
@@ -106,17 +106,6 @@ async function proxy ( rawLen, reqInit, urlObj )
     resHdrNew.delete( 'Clear-Site-Data' )
     resHdrNew.delete( 'Content-Security-Policy' )
     resHdrNew.delete( 'Content-Security-Policy-Report-Only' )
-
-    if ( res.status !== 200 )
-    {
-        return new Response( "404 Not Found", {
-            status: 404,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "content-type": "text/plain;charset=UTF-8",
-            },
-        } )
-    }
 
     return new Response( res.body, {
         headers: resHdrNew,
