@@ -1,4 +1,4 @@
-// Current Version: 1.0.2
+// Current Version: 1.0.3
 // Description: Using Cloudflare Workers to speed up gcr.io's visting.
 
 addEventListener( 'fetch', e =>
@@ -133,7 +133,7 @@ async function proxy ( rawLen, reqInit, urlObj )
         {
             return makeRes( res.body, {
                 '--error': `bad len: ${ newLen }, except: ${ rawLen }`,
-                'access-control-expose-headers': '--error',
+                'Access-Control-Expose-Headers': '--error',
             }, 400 )
         }
     }
