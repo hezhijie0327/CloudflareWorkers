@@ -1,5 +1,7 @@
-// Current Version: 1.0.0
-// Description: Using Cloudflare Workers to speed up registry.npmjs.org's visting.
+// Current Version: 1.0.1
+// Description: Using Cloudflare Workers to mirror any registry, eg: registry.npmjs.org
+
+const original_hostname = 'registry.npmjs.org'
 
 addEventListener( 'fetch', e =>
 {
@@ -36,12 +38,12 @@ async function fetchHandler ( e )
             'Accept-Language': getReqHeader( "Accept-Language" ),
             'Cache-Control': 'max-age=0',
             'Connection': 'keep-alive',
-            'Host': 'registry.npmjs.org',
+            'Host': original_hostname,
             'User-Agent': getReqHeader( "User-Agent" ),
         }
     }
     let url = new URL( e.request.url )
-    url.hostname = 'registry.npmjs.org'
+    url.hostname = original_hostname
     let workers_url = e.request.url.substr( 8 )
     workers_url = workers_url.split( "/" )
 
@@ -55,7 +57,7 @@ async function fetchHandler ( e )
 
     if ( temp_headers.get( "WWW-Authenticate" ) )
     {
-        temp_headers.set( "WWW-Authenticate", response.headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://registry.npmjs.org', 'g' ), 'https://' + workers_url[ 0 ] ) )
+        temp_headers.set( "WWW-Authenticate", response.headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://' + original_hostname, 'g' ), 'https://' + workers_url[ 0 ] ) )
     }
 
     if ( temp_headers.get( "Location" ) )
