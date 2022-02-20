@@ -1,7 +1,5 @@
-// Current Version: 1.0.1
-// Description: Using Cloudflare Workers to mirror any registry, eg: registry.npmjs.org
-
-const original_hostname = 'registry.npmjs.org'
+// Current Version: 1.0.2
+// Description: Using Cloudflare Workers to speed up mcr.microsoft.com's visting.
 
 addEventListener( 'fetch', e =>
 {
@@ -38,12 +36,12 @@ async function fetchHandler ( e )
             'Accept-Language': getReqHeader( "Accept-Language" ),
             'Cache-Control': 'max-age=0',
             'Connection': 'keep-alive',
-            'Host': original_hostname,
+            'Host': 'mcr.microsoft.com',
             'User-Agent': getReqHeader( "User-Agent" ),
         }
     }
     let url = new URL( e.request.url )
-    url.hostname = original_hostname
+    url.hostname = 'mcr.microsoft.com'
     let workers_url = e.request.url.substr( 8 )
     workers_url = workers_url.split( "/" )
 
@@ -57,7 +55,7 @@ async function fetchHandler ( e )
 
     if ( temp_headers.get( "WWW-Authenticate" ) )
     {
-        temp_headers.set( "WWW-Authenticate", response.headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://' + original_hostname, 'g' ), 'https://' + workers_url[ 0 ] ) )
+        temp_headers.set( "WWW-Authenticate", response.headers.get( "WWW-Authenticate" ).replace( new RegExp( 'https://mcr.microsoft.com', 'g' ), 'https://' + workers_url[ 0 ] ) )
     }
 
     if ( temp_headers.get( "Location" ) )
