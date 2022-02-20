@@ -1,4 +1,4 @@
-// Current Version: 1.0.3
+// Current Version: 1.0.4
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visting.
 
 addEventListener( 'fetch', e =>
@@ -56,7 +56,13 @@ async function fetchHandler ( e )
 
         if ( visiting_ip.search( /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/i ) === 0 )
         {
-            return fetch( new Request( 'https://auth.docker.io' + url.pathname + url.search, e.request ) )
+            switch ( Math.floor( Math.random() * 2 ) )
+            {
+                case 0:
+                    return fetch( new Request( 'https://auth.docker.io' + url.pathname + url.search, e.request ) )
+                case 1:
+                    return fetch( new Request( 'https://auth.docker.com' + url.pathname + url.search, e.request ) )
+            }
         } else
         {
             return fetch( new Request( 'https://auth.ipv6.docker.com' + url.pathname + url.search, e.request ) )
