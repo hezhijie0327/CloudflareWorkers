@@ -1,4 +1,4 @@
-// Current Version: 1.0.4
+// Current Version: 1.0.5
 // Description: Using Cloudflare Workers to speed up fonts.googleapis.com and fonts.gstatic.com's visting.
 
 addEventListener( "fetch", ( event ) =>
@@ -39,7 +39,7 @@ async function handleRequest ( request )
             } )
         } else
         {
-            if ( url.includes( ".collection" ) )
+            if ( url.match( /\.collection$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
@@ -48,7 +48,7 @@ async function handleRequest ( request )
                         "content-type": "font/collection;charset=UTF-8",
                     },
                 } )
-            } else if ( url.includes( ".eot" ) )
+            } else if ( url.match( /\.eot$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
@@ -57,7 +57,7 @@ async function handleRequest ( request )
                         "content-type": "application/vnd.ms-fontobject;charset=UTF-8",
                     },
                 } )
-            } else if ( url.includes( ".otf" ) )
+            } else if ( url.match( /\.otf$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
@@ -66,7 +66,7 @@ async function handleRequest ( request )
                         "content-type": "font/otf;charset=UTF-8",
                     },
                 } )
-            } else if ( url.includes( ".sfnt" ) )
+            } else if ( url.match( /\.sfnt$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
@@ -75,7 +75,7 @@ async function handleRequest ( request )
                         "content-type": "font/sfnt;charset=UTF-8",
                     },
                 } )
-            } else if ( url.includes( ".svg" ) )
+            } else if ( url.match( /\.svg$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
@@ -84,7 +84,7 @@ async function handleRequest ( request )
                         "content-type": "image/svg+xml;charset=UTF-8",
                     },
                 } )
-            } else if ( url.includes( ".ttf" ) )
+            } else if ( url.match( /\.ttf$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
@@ -93,7 +93,7 @@ async function handleRequest ( request )
                         "content-type": "font/ttf;charset=UTF-8",
                     },
                 } )
-            } else if ( url.includes( ".woff" ) )
+            } else if ( url.match( /\.woff$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
@@ -102,7 +102,7 @@ async function handleRequest ( request )
                         "content-type": "font/woff;charset=UTF-8",
                     },
                 } )
-            } else if ( url.includes( ".woff2" ) )
+            } else if ( url.match( /\.woff2$/ ) )
             {
                 return new Response( response_font.body, {
                     status: 200,
