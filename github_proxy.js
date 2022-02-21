@@ -1,4 +1,4 @@
-// Current Version: 1.1.1
+// Current Version: 1.1.2
 // Description: Using Cloudflare Workers to proxy GitHub.
 
 const URL_REGEX = {
@@ -101,7 +101,7 @@ function httpHandler ( req, pathname )
     let rawLen = ''
     let urlStr = pathname
 
-    if ( !urlStr.startsWith( 'http' ) )
+    if ( !urlStr.match( /^https?:\/\// ) )
     {
         urlStr = 'https://' + urlStr
     }
