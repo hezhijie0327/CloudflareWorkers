@@ -1,4 +1,4 @@
-// Current Version: 1.1.5
+// Current Version: 1.1.6
 // Description: Using Cloudflare Workers to deploy AriaNg.
 
 addEventListener( "fetch", ( event ) =>
@@ -135,7 +135,7 @@ async function handleRequest ( request )
 
             if ( response.status === 200 )
             {
-                if ( url.includes( ".css" ) )
+                if ( url.match( /\.css$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -144,7 +144,7 @@ async function handleRequest ( request )
                             "content-type": "text/css;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".eot" ) )
+                } else if ( url.match( /\.eot$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -153,7 +153,7 @@ async function handleRequest ( request )
                             "content-type": "application/vnd.ms-fontobject;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".html" ) )
+                } else if ( url.match( /\.html$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -162,7 +162,7 @@ async function handleRequest ( request )
                             "content-type": "text/html;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".ico" ) )
+                } else if ( url.match( /\.ico$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -171,7 +171,7 @@ async function handleRequest ( request )
                             "content-type": "image/x-icon;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".js" ) )
+                } else if ( url.match( /\.js$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -180,7 +180,7 @@ async function handleRequest ( request )
                             "content-type": "text/javascript;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".manifest" ) )
+                } else if ( url.match( /\.manifest$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -189,7 +189,7 @@ async function handleRequest ( request )
                             "content-type": "text/cache-manifest;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".png" ) )
+                } else if ( url.match( /\.png$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -198,7 +198,7 @@ async function handleRequest ( request )
                             "content-type": "image/png;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".svg" ) )
+                } else if ( url.match( /\.svg$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -207,7 +207,7 @@ async function handleRequest ( request )
                             "content-type": "image/svg+xml;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".ttf" ) )
+                } else if ( url.match( /\.ttf$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -216,7 +216,7 @@ async function handleRequest ( request )
                             "content-type": "font/ttf;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".txt" ) )
+                } else if ( url.match( /\.txt$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -225,7 +225,7 @@ async function handleRequest ( request )
                             "content-type": "text/plain;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".woff" ) )
+                } else if ( url.match( /\.woff$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
@@ -234,7 +234,7 @@ async function handleRequest ( request )
                             "content-type": "font/woff;charset=UTF-8",
                         },
                     } )
-                } else if ( url.includes( ".woff2" ) )
+                } else if ( url.match( /\.woff2$/ ) )
                 {
                     return new Response( response.body, {
                         status: 200,
