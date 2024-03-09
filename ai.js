@@ -1,4 +1,4 @@
-// Current Version: 1.0.2
+// Current Version: 1.0.3
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -57,11 +57,11 @@ async function handleRequest ( request )
             "messages": [
                 {
                     "role": "system",
-                    "content": ROLE_SYSTEM
+                    "content": decodeURIComponent(ROLE_SYSTEM)
                 },
                 {
                     "role": "user",
-                    "content": CONTENT
+                    "content": decodeURIComponent(CONTENT)
                 }
             ]
         }
