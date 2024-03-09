@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -15,10 +15,13 @@ async function handleRequest ( request )
     let url = request.url.substr( 8 )
     url = url.substr( url.indexOf( "/" ) + 1 )
 
-    // security check, check header whether it is valid
-    if ( request.headers.get( "Authorization" ) != "Bearer " + CF_AI_API )
+    // security check, check the API key in url and header
+    if ( url.substr( 0, url.indexOf( "?" ) ) != CF_AI_API )
     {
-        return new Response( "Invalid Authorization", { status: 401 } )
+        if ( request.headers.get( "Authorization" ) != "Bearer " + CF_AI_API )
+        {
+            return new Response( "Invalid API", { status: 400 } )
+        }
     }
 
     // check url whether it is valid, it should be /?role=someinfomation&content=somequestion or /?content=somequestion
