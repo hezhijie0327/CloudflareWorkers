@@ -1,4 +1,4 @@
-// Current Version: 1.0.3
+// Current Version: 1.0.4
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -10,12 +10,14 @@ async function handleRequest ( request )
 {
     const CF_ACCOUNT_ID = ""
     const CF_AI_API = ""
-    const CF_AI_MODEL = "@cf/meta/llama-2-7b-chat-int8"
+    const CF_AI_MODEL = "@cf/qwen/qwen1.5-14b-chat-awq"
+
+    const OFFICIAL_MODEL_NAME = "Cloudflare AI"
 
     let url = request.url.substr( 8 )
     url = url.substr( url.indexOf( "/" ) + 1 )
 
-    // security check, check the API key in url and header
+    // security check, check header whether it is valid and check url whether has the correct api.
     if ( url.substr( 0, url.indexOf( "?" ) ) != CF_AI_API )
     {
         if ( request.headers.get( "Authorization" ) != "Bearer " + CF_AI_API )
@@ -31,7 +33,7 @@ async function handleRequest ( request )
     } else
     {
         // Set default ROLE_SYSTEM
-        let ROLE_SYSTEM = "You are a helper that searches the internet and summarizes the results."
+        let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
         let CONTENT = ""
 
         // split the url to get the role and content
