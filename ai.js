@@ -1,4 +1,4 @@
-// Current Version: 1.0.6
+// Current Version: 1.0.7
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -10,7 +10,33 @@ async function handleRequest ( request )
 {
     const CF_ACCOUNT_ID = ""
     const CF_AI_API = ""
-    const CF_AI_MODEL = "@cf/qwen/qwen1.5-14b-chat-awq"
+
+    // https://developers.cloudflare.com/workers-ai/models/#text-generation
+    const CF_AI_MODEL = [
+        //"@cf/defog/sqlcoder-7b-2", // SQL model
+        "@cf/deepseek-ai/deepseek-math-7b-base",
+        "@cf/deepseek-ai/deepseek-math-7b-instruct",
+        "@cf/thebloke/discolm-german-7b-v1-awq",
+        "@cf/tiiuae/falcon-7b-instruct",
+        //"@cf/meta/llama-2-7b-chat-int8", // Paid model
+        //"@cf/meta/llama-2-7b-chat-fp16", // Paid model
+        "@cf/microsoft/phi-2",
+        //"@cf/mistral/mistral-7b-instruct-v0.1", // Paid model
+        "@cf/openchat/openchat-3.5-0106",
+        "@cf/qwen/qwen1.5-0.5b-chat",
+        "@cf/qwen/qwen1.5-1.8b-chat",
+        "@cf/qwen/qwen1.5-7b-chat-awq",
+        "@cf/qwen/qwen1.5-14b-chat-awq",
+        "@cf/tinyllama/tinyllama-1.1b-chat-v1.0",
+        "@hf/thebloke/deepseek-coder-6.7b-base-awq",
+        "@hf/thebloke/deepseek-coder-6.7b-instruct-awq",
+        "@hf/thebloke/llama-2-13b-chat-awq",
+        "@hf/thebloke/llamaguard-7b-awq",
+        "@hf/thebloke/mistral-7b-instruct-v0.1-awq",
+        "@hf/thebloke/neural-chat-7b-v3-1-awq",
+        "@hf/thebloke/openhermes-2.5-mistral-7b-awq",
+        "@hf/thebloke/zephyr-7b-beta-awq",
+    ]
 
     const OFFICIAL_MODEL_NAME = "Cloudflare AI"
 
@@ -75,8 +101,8 @@ async function handleRequest ( request )
             body: JSON.stringify( body )
         }
 
-        // call the AI
-        let response = await fetch( "https://api.cloudflare.com/client/v4/accounts/" + CF_ACCOUNT_ID + "/ai/run/" + CF_AI_MODEL, options )
+        // call the AI, random select a model
+        let response = await fetch( "https://api.cloudflare.com/client/v4/accounts/" + CF_ACCOUNT_ID + "/ai/run/" + CF_AI_MODEL[ Math.floor( Math.random() * CF_AI_MODEL.length ) ], options )
 
         // modify response insert CF_AI_MODEL and OFFICIAL_MODEL_NAME to json file
         let json = await response.json()
