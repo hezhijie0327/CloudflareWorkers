@@ -1,4 +1,4 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -80,8 +80,10 @@ async function handleRequest ( request )
 
         // modify response insert CF_AI_MODEL and OFFICIAL_MODEL_NAME to json file
         let json = await response.json()
-        json.model = CF_AI_MODEL
-        json.model_name = OFFICIAL_MODEL_NAME
+        json.model = {
+            "official": OFFICIAL_MODEL_NAME,
+            "origin": CF_AI_MODEL
+        }
 
         // return the response
         return new Response( JSON.stringify( json ), response )
