@@ -1,4 +1,4 @@
-// Current Version: 1.0.8
+// Current Version: 1.0.9
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -50,8 +50,29 @@ async function handleRequest ( request )
 
     const OFFICIAL_MODEL_NAME = "Cloudflare AI"
 
+    let CONTENT = ""
+    let IMAGE = "false"
+    let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
+
     let url = request.url.substr( 8 )
     url = url.substr( url.indexOf( "/" ) + 1 )
+
+    // split the url to get the role, content and image
+    let params = url.split( "?" )[ 1 ].split( "&" )
+    for ( let i = 0; i < params.length; i++ )
+    {
+        let param = params[ i ].split( "=" )
+        if ( param[ 0 ] == "role" )
+        {
+            ROLE_SYSTEM = param[ 1 ]
+        } else if ( param[ 0 ] == "content" )
+        {
+            CONTENT = param[ 1 ]
+        } else if ( param[ 0 ] == "image" )
+        {
+            IMAGE = param[ 1 ]
+        }
+    }
 
     // security check, check header whether it is valid and check url whether has the correct api.
     if ( url.substr( 0, url.indexOf( "?" ) ) != CF_AI_API )
@@ -70,29 +91,8 @@ async function handleRequest ( request )
     {
         let AI_MODEL = ""
 
-        let CONTENT = ""
-        let IMAGE = "false"
-        let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
-
         let body = {}
         let headers = new Headers()
-
-        // split the url to get the role, content and image
-        let params = url.split( "?" )[ 1 ].split( "&" )
-        for ( let i = 0; i < params.length; i++ )
-        {
-            let param = params[ i ].split( "=" )
-            if ( param[ 0 ] == "role" )
-            {
-                ROLE_SYSTEM = param[ 1 ]
-            } else if ( param[ 0 ] == "content" )
-            {
-                CONTENT = param[ 1 ]
-            } else if ( param[ 0 ] == "image" )
-            {
-                IMAGE = param[ 1 ]
-            }
-        }
 
         // set the headers
         headers.set( "Authorization", "Bearer " + CF_AI_API )
