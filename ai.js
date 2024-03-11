@@ -1,4 +1,4 @@
-// Current Version: 1.0.9
+// Current Version: 1.1.0
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -50,11 +50,13 @@ async function handleRequest ( request )
 
     const OFFICIAL_MODEL_NAME = "Cloudflare AI"
 
+    let BASE64 = ""
     let CONTENT = ""
     let IMAGE = "false"
     let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
 
     let url = request.url.substr( 8 )
+    let path = url.split( "/" )
     url = url.substr( url.indexOf( "/" ) + 1 )
 
     // split the url to get the role, content and image
@@ -71,19 +73,29 @@ async function handleRequest ( request )
         } else if ( param[ 0 ] == "image" )
         {
             IMAGE = param[ 1 ]
+        } else if ( param[ 0 ] == "base64" )
+        {
+            BASE64 = param[ 1 ]
         }
     }
 
     // security check, check header whether it is valid and check url whether has the correct api.
     if ( url.substr( 0, url.indexOf( "?" ) ) != CF_AI_API )
     {
-        if ( request.headers.get( "Authorization" ) != "Bearer " + CF_AI_API )
+        if ( BASE64 == "" )
         {
-            return new Response( "Invalid API", { status: 400 } )
+            if ( request.headers.get( "Authorization" ) != "Bearer " + CF_AI_API )
+            {
+                return new Response( "Invalid API", { status: 400 } )
+            }
+        } else
+        {
+            // Parsing base64 and 302 redirect to the original URL
+            return Response.redirect( "https://" + path[ 0 ] + '/' + atob( BASE64 ), 301 )
         }
     }
 
-    // check url whether it is valid, it should be /?role=someinfomation&content=somequestion&image=false or /?role=someinfomation&content=somequestion or /?content=somequestion&image=false or /?content=somequestion or /?content=somequestion&image=true
+    // check url whether it is valid, it should be /?role=someinfomation&content=somequestion&image=false or /?role=someinfomation&content=somequestion or /?content=somequestion&image=false or /?content=somequestion or /?content=somequestion&image=true or /?base64=somebase64
     if ( url.indexOf( "?" ) == -1 )
     {
         return new Response( "Invalid URL", { status: 400 } )
