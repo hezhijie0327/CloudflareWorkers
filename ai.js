@@ -1,4 +1,4 @@
-// Current Version: 1.1.0
+// Current Version: 1.1.1
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -49,9 +49,12 @@ async function handleRequest ( request )
     }
 
     const OFFICIAL_MODEL_NAME = "Cloudflare AI"
+    const SECURITY_KEY = ""
 
     let BASE64 = ""
     let CONTENT = ""
+    let EXPRIED_TIME = '' + new Date().getFullYear() + ( '0' + ( new Date().getMonth() + 1 ) ).slice( -2 ) + ( '0' + new Date().getDate() ).slice( -2 ) + ( '0' + new Date().getHours() ).slice( -2 )
+    let HASH = ""
     let IMAGE = "false"
     let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
 
@@ -79,8 +82,26 @@ async function handleRequest ( request )
         }
     }
 
+    // Calculate the hash for CF_ACCOUNT_ID, CF_AI_API and EXPRIED_TIME
+    for ( let i = 0; i < CF_ACCOUNT_ID.length; i++ )
+    {
+        HASH += CF_ACCOUNT_ID.charCodeAt( i ).toString( 16 )
+    }
+    for ( let i = 0; i < CF_AI_API.length; i++ )
+    {
+        HASH += CF_AI_API.charCodeAt( i ).toString( 16 )
+    }
+    for ( let i = 0; i < EXPRIED_TIME.length; i++ )
+    {
+        HASH += EXPRIED_TIME.charCodeAt( i ).toString( 16 )
+    }
+    for ( let i = 0; i < SECURITY_KEY.length; i++ )
+    {
+        HASH += SECURITY_KEY.charCodeAt( i ).toString( 16 )
+    }
+
     // security check, check header whether it is valid and check url whether has the correct api.
-    if ( url.substr( 0, url.indexOf( "?" ) ) != CF_AI_API )
+    if ( url.substr( 0, url.indexOf( "?" ) ) != HASH )
     {
         if ( BASE64 == "" )
         {
@@ -156,8 +177,10 @@ async function handleRequest ( request )
             return new Response( response.body, response )
         } else
         {
-            // modify response insert CF_AI_MODEL and OFFICIAL_MODEL_NAME to json file
             let json = await response.json()
+
+            json.base64 = "https://" + path[ 0 ] + "/?base64=" + btoa( HASH + "?content=" + CONTENT + "&image=true" )
+
             json.model = {
                 "official": OFFICIAL_MODEL_NAME,
                 "origin": CF_AI_MODEL.Text_Generation
