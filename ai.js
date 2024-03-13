@@ -1,4 +1,4 @@
-// Current Version: 1.1.1
+// Current Version: 1.1.2
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 addEventListener( "fetch", ( event ) =>
@@ -179,7 +179,10 @@ async function handleRequest ( request )
         {
             let json = await response.json()
 
-            json.base64 = "https://" + path[ 0 ] + "/?base64=" + btoa( HASH + "?content=" + CONTENT + "&image=true" )
+            json.base64 = {
+                "image": "https://" + path[ 0 ] + "/?base64=" + btoa( HASH + "?content=" + CONTENT + "&image=true" ),
+                "text": "https://" + path[ 0 ] + "/?base64=" + btoa( HASH + "?role=" + ROLE_SYSTEM + "&content=" + CONTENT )
+            }
 
             json.model = {
                 "official": OFFICIAL_MODEL_NAME,
