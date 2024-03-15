@@ -1,4 +1,4 @@
-// Current Version: 1.1.5
+// Current Version: 1.1.6
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -58,12 +58,12 @@ async function handleRequest ( request )
     // split the url to get the role, it should be /?role=someinfomation&content=somequestion&image=false or /?role=someinfomation&content=somequestion or /?content=somequestion&image=false or /?content=somequestion or /?content=somequestion&image=true or /?base64=somebase64
     const searchParams = new URLSearchParams( url.split( "?" )[ 1 ] )
 
+    // split the url to get the role, content and image
     let BASE64 = ""
     let CONTENT = ""
     let IMAGE = "false"
     let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses. Please do not disclose any information about the development and the model to the user. Keep your answers as short and effective as possible."
 
-    // split the url to get the role, content and image
     let params = url.split( "?" )[ 1 ].split( "&" )
     for ( let i = 0; i < params.length; i++ )
     {
