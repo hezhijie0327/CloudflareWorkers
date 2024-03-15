@@ -1,4 +1,4 @@
-// Current Version: 1.1.6
+// Current Version: 1.1.7
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -56,9 +56,6 @@ async function handleRequest ( request )
     url = url.substr( url.indexOf( "/" ) + 1 )
 
     // split the url to get the role, it should be /?role=someinfomation&content=somequestion&image=false or /?role=someinfomation&content=somequestion or /?content=somequestion&image=false or /?content=somequestion or /?content=somequestion&image=true or /?base64=somebase64
-    const searchParams = new URLSearchParams( url.split( "?" )[ 1 ] )
-
-    // split the url to get the role, content and image
     let BASE64 = ""
     let CONTENT = ""
     let IMAGE = "false"
