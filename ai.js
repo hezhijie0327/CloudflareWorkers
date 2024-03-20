@@ -1,8 +1,9 @@
-// Current Version: 1.1.7
+// Current Version: 1.1.8
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
 const CF_AI_API = ""
+const CF_AI_GATEWAY = ""
 
 const CF_AI_MODEL = {
     // https://developers.cloudflare.com/workers-ai/models/#text-generation
@@ -131,7 +132,7 @@ async function handleRequest ( request )
             body: JSON.stringify( body )
         }
 
-        const response = await fetch( "https://api.cloudflare.com/client/v4/accounts/" + CF_ACCOUNT_ID + "/ai/run/" + AI_MODEL, options )
+        const response = await fetch( "https://gateway.ai.cloudflare.com/v1/" + CF_ACCOUNT_ID + "/" + CF_AI_GATEWAY + "/workers-ai/" + AI_MODEL, options )
 
         if ( IMAGE === "true" )
         {
