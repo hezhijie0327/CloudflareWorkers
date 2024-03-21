@@ -1,4 +1,4 @@
-// Current Version: 1.2.0
+// Current Version: 1.2.1
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -154,7 +154,7 @@ async function handleRequest ( request )
             const json = await response.json()
 
             json.base64 = {
-                "image": "https://" + path[ 0 ] + "/?base64=" + btoa( hashHex + "?content=" + CONTENT + "&image=true" ),
+                "image": "https://" + path[ 0 ] + "/?base64=" + btoa( hashHex + "?content=" + decodeURIComponent( json.result.response ) + "&image=true" ),
                 "text": "https://" + path[ 0 ] + "/?base64=" + btoa( hashHex + "?role=" + ROLE_SYSTEM + "&content=" + CONTENT )
             }
 
