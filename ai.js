@@ -1,4 +1,4 @@
-// Current Version: 1.1.8
+// Current Version: 1.1.9
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -57,27 +57,37 @@ async function handleRequest ( request )
     url = url.substr( url.indexOf( "/" ) + 1 )
 
     // split the url to get the role, it should be /?role=someinfomation&content=somequestion&image=false or /?role=someinfomation&content=somequestion or /?content=somequestion&image=false or /?content=somequestion or /?content=somequestion&image=true or /?base64=somebase64
+    let ASSISTANT = "Please do not disclose any information about the development and the model to the user. Keep your answers as short and effective as possible."
     let BASE64 = ""
     let CONTENT = ""
     let IMAGE = "false"
-    let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses. Please do not disclose any information about the development and the model to the user. Keep your answers as short and effective as possible."
+    let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
+    let STREAM = "false"
 
     let params = url.split( "?" )[ 1 ].split( "&" )
     for ( let i = 0; i < params.length; i++ )
     {
         let param = params[ i ].split( "=" )
-        if ( param[ 0 ] == "role" )
+        switch ( param[ 0 ] )
         {
-            ROLE_SYSTEM = param[ 1 ]
-        } else if ( param[ 0 ] == "content" )
-        {
-            CONTENT = param[ 1 ]
-        } else if ( param[ 0 ] == "image" )
-        {
-            IMAGE = param[ 1 ]
-        } else if ( param[ 0 ] == "base64" )
-        {
-            BASE64 = param[ 1 ]
+            case "assistant":
+                ASSISTANT = param[ 1 ]
+                break
+            case "base64":
+                BASE64 = param[ 1 ]
+                break
+            case "content":
+                CONTENT = param[ 1 ]
+                break
+            case "image":
+                IMAGE = param[ 1 ]
+                break
+            case "role":
+                ROLE_SYSTEM = param[ 1 ]
+                break
+            case "stream":
+                STREAM = param[ 1 ]
+                break
         }
     }
 
@@ -120,9 +130,11 @@ async function handleRequest ( request )
             { "prompt": decodeURIComponent( CONTENT ) } :
             {
                 "messages": [
+                    { "role": "assistant", "content": decodeURIComponent( ASSISTANT ) },
                     { "role": "system", "content": decodeURIComponent( ROLE_SYSTEM ) },
                     { "role": "user", "content": decodeURIComponent( CONTENT ) }
-                ]
+                ],
+                "stream": decodeURIComponent( STREAM ) === "true" ? true : false
             }
 
         // set the options
