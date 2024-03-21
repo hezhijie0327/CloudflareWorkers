@@ -1,4 +1,4 @@
-// Current Version: 1.1.9
+// Current Version: 1.2.0
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -160,7 +160,7 @@ async function handleRequest ( request )
 
             json.model = {
                 "official": OFFICIAL_MODEL_NAME,
-                "origin": CF_AI_MODEL.Text_Generation
+                "origin": AI_MODEL
             }
 
             // return the response
