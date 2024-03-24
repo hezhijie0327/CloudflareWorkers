@@ -1,4 +1,4 @@
-// Current Version: 1.2.2
+// Current Version: 1.2.3
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -62,7 +62,6 @@ async function handleRequest ( request )
     let CONTENT = ""
     let IMAGE = "false"
     let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
-    let STREAM = "false"
 
     let params = url.split( "?" )[ 1 ].split( "&" )
     for ( let i = 0; i < params.length; i++ )
@@ -84,9 +83,6 @@ async function handleRequest ( request )
                 break
             case "role":
                 ROLE_SYSTEM = param[ 1 ]
-                break
-            case "stream":
-                STREAM = param[ 1 ]
                 break
         }
     }
@@ -133,8 +129,7 @@ async function handleRequest ( request )
                     { "role": "assistant", "content": decodeURIComponent( ASSISTANT ) },
                     { "role": "system", "content": decodeURIComponent( ROLE_SYSTEM ) },
                     { "role": "user", "content": decodeURIComponent( CONTENT ) }
-                ],
-                "stream": decodeURIComponent( STREAM ) === "true" ? true : false
+                ]
             }
 
         // set the options
@@ -153,18 +148,23 @@ async function handleRequest ( request )
         {
             const json = await response.json()
 
-            json.base64 = {
-                "image": "https://" + path[ 0 ] + "/?base64=" + btoa( hashHex + "?content=" + encodeURIComponent( json.result.response ) + "&image=true" ),
-                "text": "https://" + path[ 0 ] + "/?base64=" + btoa( hashHex + "?role=" + ROLE_SYSTEM + "&content=" + CONTENT )
-            }
-
-            json.model = {
-                "official": OFFICIAL_MODEL_NAME,
-                "origin": AI_MODEL
-            }
-
             // return the response
-            return new Response( JSON.stringify( json ), response )
+            return new Response( JSON.stringify(
+                {
+                    "base64": {
+                        "image": "https://" + path[ 0 ] + "/?base64=" + btoa( hashHex + "?content=" + encodeURIComponent( json.result.response ) + "&image=true" ),
+                        "text": "https://" + path[ 0 ] + "/?base64=" + btoa( hashHex + "?role=" + ROLE_SYSTEM + "&content=" + CONTENT )
+                    },
+                    "errors": json.errors,
+                    "messages": json.messages,
+                    "model": {
+                        "official": OFFICIAL_MODEL_NAME,
+                        "origin": AI_MODEL
+                    },
+                    "result": json.result,
+                    "success": json.success
+                }
+            ), response )
         }
     }
 }
