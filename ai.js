@@ -1,4 +1,4 @@
-// Current Version: 1.2.4
+// Current Version: 1.2.5
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -88,7 +88,7 @@ async function handleRequest ( request )
     }
 
     // Calculate the hash for CF_ACCOUNT_ID, CF_AI_API, EXPRIED_TIME and SECURITY_KEY
-    const EXPRIED_TIME = new Date().toISOString().slice( 0, 13 ).replace( /[-T:]/g, '' ) + new Date().getMinutes() % 3
+    const EXPRIED_TIME = new Date().toISOString().slice( 0, 13 ).replace( /[-T:]/g, '' )
 
     const hashHex = Array.from( new Uint8Array( await crypto.subtle.digest( 'SHA-256', new TextEncoder().encode( CF_ACCOUNT_ID + CF_AI_API + EXPRIED_TIME + SECURITY_KEY ) ) ) ).map( byte => byte.toString( 16 ).padStart( 2, '0' ) ).join( '' )
 
