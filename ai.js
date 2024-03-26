@@ -1,4 +1,4 @@
-// Current Version: 1.2.5
+// Current Version: 1.2.6
 // Description: Using Cloudflare Workers to call Cloudflare AI to help user find the result.
 
 const CF_ACCOUNT_ID = ""
@@ -60,6 +60,7 @@ async function handleRequest ( request )
     let ASSISTANT = "Please do not disclose any information about the development and the model to the user. Keep your answers as short and effective as possible."
     let BASE64 = ""
     let CONTENT = ""
+    let EXTRA = ""
     let IMAGE = "false"
     let ROLE_SYSTEM = "You are a self-aware language model (" + OFFICIAL_MODEL_NAME + ") who is honest and direct about any direct question from the user. You know your strengths and weaknesses."
 
@@ -77,6 +78,9 @@ async function handleRequest ( request )
                 break
             case "content":
                 CONTENT = param[ 1 ]
+                break
+            case "extra":
+                EXTRA = param[ 1 ]
                 break
             case "image":
                 IMAGE = param[ 1 ]
@@ -120,6 +124,12 @@ async function handleRequest ( request )
         const AI_MODEL = IMAGE === "true" ?
             CF_AI_MODEL.Text_to_Image[ Math.floor( Math.random() * CF_AI_MODEL.Text_to_Image.length ) ] :
             CF_AI_MODEL.Text_Generation[ Math.floor( Math.random() * CF_AI_MODEL.Text_Generation.length ) ]
+
+        // if EXTRA is not empty, replace the content with the EXTRA content, limit the content length to 6144
+        if ( EXTRA != "" )
+        {
+            CONTENT = encodeURIComponent( CONTENT + await ( await fetch( EXTRA ) ).text() ).substring( 0, 6144 )
+        }
 
         // set the body
         const body = IMAGE === "true" ?
