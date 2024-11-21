@@ -1,4 +1,4 @@
-// Current Version: 1.0.8
+// Current Version: 1.0.9
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -45,5 +45,5 @@ async function fetchHandler ( e )
         return new Response( res.body, { headers: resHdrNew, status: res.status } )
     }
 
-    return new Response( response.body, { status: response.status, headers: response.headers } )
+    return new Response( response.body, { status: response.status, headers: tempHeaders } )
 }
