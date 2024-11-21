@@ -1,5 +1,5 @@
-// Current Version: 1.1.1
-// Description: Using Cloudflare Workers to proxy download everything.
+// Current Version: 1.1.2
+// Description: Using Cloudflare Workers to Reverse Proxy everything.
 
 addEventListener( 'fetch', event =>
 {
