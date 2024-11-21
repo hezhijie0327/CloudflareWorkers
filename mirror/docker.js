@@ -1,4 +1,4 @@
-// Current Version: 1.0.7
+// Current Version: 1.0.8
 // Description: Using Cloudflare Workers to speed up registry-1.docker.io's visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -25,12 +25,24 @@ async function fetchHandler ( e )
         }
     } ), e.request )
 
-    if ( response.headers.get( "WWW-Authenticate" ) )
+    let tempHeaders = new Headers( response.headers )
+
+    if ( tempHeaders.get( "WWW-Authenticate" ) )
     {
-        response.headers.set( "WWW-Authenticate", response.headers.get( "WWW-Authenticate" ).replace(
-            /https:\/\/auth\.(ipv6\.)?docker\.(io|com)/g,
-            `https://${ e.request.url.split( '/' )[ 2 ] }`
-        ) )
+        tempHeaders.set( "WWW-Authenticate", tempHeaders.get( "WWW-Authenticate" ).replace( /https:\/\/auth\.(ipv6\.)?docker\.(io|com)/g, `https://${ e.request.url.split( '/' )[ 2 ] }` ) )
+    }
+
+    if ( tempHeaders.get( "Location" ) )
+    {
+        const res = await fetch( new Request( tempHeaders.get( "Location" ), { body: e.request.body, headers: e.request.headers, method: e.request.method, redirect: 'follow' } ) )
+        const resHdrNew = new Headers( res.headers )
+
+        resHdrNew.set( 'Access-Control-Allow-Headers', '*' )
+        resHdrNew.set( 'Access-Control-Allow-Methods', '*' )
+        resHdrNew.set( 'Access-Control-Allow-Origin', '*' )
+        resHdrNew.set( 'Cache-Control', 'no-store' )
+
+        return new Response( res.body, { headers: resHdrNew, status: res.status } )
     }
 
     return new Response( response.body, { status: response.status, headers: response.headers } )
