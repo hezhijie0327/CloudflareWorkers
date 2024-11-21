@@ -1,4 +1,4 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to speed up gcr.io's visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -35,5 +35,5 @@ async function fetchHandler ( e )
         return new Response( res.body, { headers: resHdrNew, status: res.status } )
     }
 
-    return new Response( response.body, { status: response.status, headers: response.headers } )
+    return new Response( response.body, { status: response.status, headers: tempHeaders } )
 }
