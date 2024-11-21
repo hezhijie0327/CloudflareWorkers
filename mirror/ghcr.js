@@ -1,4 +1,4 @@
-// Current Version: 1.0.4
+// Current Version: 1.0.5
 // Description: Using Cloudflare Workers to speed up ghcr.io's visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -19,7 +19,7 @@ async function fetchHandler ( e )
 
     if ( tempHeaders.get( "WWW-Authenticate" ) )
     {
-        tempHeaders.set( "WWW-Authenticate", tempHeaders.get( "WWW-Authenticate" ).replace( /https:\/\/ghci\.io/g, `https://${ e.request.url.split( '/' )[ 2 ] }` ) )
+        tempHeaders.set( "WWW-Authenticate", tempHeaders.get( "WWW-Authenticate" ).replace( /https:\/\/ghcr\.io/g, `https://${ e.request.url.split( '/' )[ 2 ] }` ) )
     }
 
     if ( tempHeaders.get( "Location" ) )
