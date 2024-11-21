@@ -1,4 +1,4 @@
-// Current Version: 1.0.1
+// Current Version: 1.0.2
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -27,6 +27,15 @@ async function fetchHandler ( e )
 
         url.hostname = domainMapping[ subdomain ]
 
+        if (url.hostname === 'registry-1.docker.io' && url.pathname === '/token') {
+            const ip = e.request.headers.get('CF-Connecting-IP') || '127.0.0.1'
+            const authHostname = /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)
+                ? (Math.random() < 0.5 ? 'auth.docker.com' : 'auth.docker.io')
+                : 'auth.ipv6.docker.com'
+
+            return fetch(new Request(`https://${authHostname}${url.pathname}${url.search}`, e.request))
+        }
+
         let response = await fetch( new Request( url, {
             headers: {
                 'Host': url.hostname,
@@ -38,9 +47,9 @@ async function fetchHandler ( e )
 
         if ( tempHeaders.has( 'WWW-Authenticate' ) )
         {
-            const authRegex = subdomain === 'docker'
+            const authRegex = url.hostname === 'registry-1.docker.io'
                 ? /https:\/\/auth\.(ipv6\.)?docker\.(io|com)/g
-                : new RegExp( `https://${ url.hostname }`, 'g' )
+                : `/https://${ url.hostname }/g`
 
             tempHeaders.set( 'WWW-Authenticate', tempHeaders.get( 'WWW-Authenticate' ).replace(
                 authRegex,
