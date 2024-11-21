@@ -1,114 +1,73 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to proxy download everything.
 
-addEventListener( 'fetch', e =>
+addEventListener( 'fetch', event =>
 {
-    const ret = fetchHandler( e )
-        .catch( err => makeRes( 'Error:\n' + err.stack, {}, 502 ) )
-    e.respondWith( ret )
+    event.respondWith( handleRequest( event.request ) )
 } )
 
-function makeRes ( body, headers = {}, status = 200 )
-{
-    headers[ 'Access-Control-Allow-Origin' ] = '*'
-    return new Response( body, { headers, status } )
-}
-
-function newUrl ( urlStr )
+async function handleRequest ( request )
 {
     try
     {
-        return new URL( urlStr )
-    } catch ( err )
-    {
-        return null
-    }
-}
+        const url = new URL( request.url )
 
-async function fetchHandler ( e )
-{
-    const req = e.request
-    const urlStr = req.url
-    const urlObj = new URL( urlStr )
-
-    let path = decodeURIComponent( urlObj.href.substring( urlObj.origin.length + 1 ) ).replace( /^https?:\/+/, 'https://' )
-
-    if ( !path.match( /^https?:\/\// ) )
-    {
-        return new Response( "403 Forbidden", {
-            status: 403,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "content-type": "text/plain;charset=UTF-8",
-            },
-        } )
-    }
-    else
-    {
-        return httpHandler( req, path )
-    }
-}
-
-function httpHandler ( req, pathname )
-{
-    const reqHdrRaw = req.headers
-
-    if ( req.method === 'OPTIONS' && reqHdrRaw.has( 'Access-Control-Request-Headers' ) )
-    {
-        return new Response( null, {
-            headers: {
-                'Access-Control-Allow-Methods': 'DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Max-Age': '86400',
-            }, status: 204
-        } )
-    }
-
-    let rawLen = ''
-    let urlStr = pathname
-
-    const reqHdrNew = new Headers( reqHdrRaw )
-    const urlObj = newUrl( urlStr )
-    const reqInit = {
-        body: req.body,
-        headers: reqHdrNew,
-        method: req.method,
-        redirect: 'follow'
-    }
-
-    return proxy( rawLen, reqInit, urlObj )
-}
-
-async function proxy ( rawLen, reqInit, urlObj )
-{
-    const res = await fetch( urlObj.href, reqInit )
-    const resHdrOld = res.headers
-    const resHdrNew = new Headers( resHdrOld )
-
-    if ( rawLen )
-    {
-        const newLen = resHdrOld.get( 'Content-Length' ) || ''
-        const badLen = ( rawLen !== newLen )
-
-        if ( badLen )
+        let targetUrl = decodeURIComponent( url.pathname.slice( 1 ) )
+        if ( !/^https?:\/\//.test( targetUrl ) )
         {
-            return makeRes( res.body, {
-                '--error': `bad len: ${ newLen }, except: ${ rawLen }`,
-                'Access-Control-Expose-Headers': '--error',
-            }, 400 )
+            targetUrl = `${ url.protocol }//${ targetUrl }`
         }
+        targetUrl += url.search
+
+        const headers = new Headers( [ ...request.headers ].filter( ( [ name ] ) => !name.startsWith( 'cf-' ) ) )
+
+        const response = await fetch( new Request( targetUrl, {
+            headers,
+            method: request.method,
+            body: request.body,
+            redirect: 'manual'
+        } ) )
+
+        let body = response.body
+
+        if ( [ 301, 302, 303, 307, 308 ].includes( response.status ) )
+        {
+            const location = response.headers.get( 'location' )
+            return new Response( body, {
+                status: response.status,
+                headers: {
+                    ...response.headers,
+                    'Location': `/${ encodeURIComponent( location ) }`
+                }
+            } )
+        }
+
+        if ( response.headers.get( "Content-Type" )?.includes( "text/html" ) )
+        {
+            const originalText = await response.text()
+            body = originalText.replace(
+                /((href|src|action)=["'])\/(?!\/)/g,
+                `$1${ url.protocol }//${ url.host }/${ new URL( targetUrl ).origin }/`
+            )
+        }
+
+        const modifiedResponse = new Response( body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers
+        } )
+
+        modifiedResponse.headers.set( 'Cache-Control', 'no-store' )
+        modifiedResponse.headers.set( 'Access-Control-Allow-Origin', '*' )
+        modifiedResponse.headers.set( 'Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE' )
+        modifiedResponse.headers.set( 'Access-Control-Allow-Headers', '*' )
+
+        return modifiedResponse
+    } catch ( error )
+    {
+        return new Response( JSON.stringify( { error: error.message } ), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        } )
     }
-
-    resHdrNew.set( 'Access-Control-Allow-Origin', '*' )
-    resHdrNew.set( 'Access-Control-Expose-Headers', '*' )
-    resHdrNew.set( 'Cache-Control', 'max-age=0' )
-
-    resHdrNew.delete( 'Clear-Site-Data' )
-    resHdrNew.delete( 'Content-Security-Policy' )
-    resHdrNew.delete( 'Content-Security-Policy-Report-Only' )
-
-    return new Response( res.body, {
-        headers: resHdrNew,
-        status: res.status
-    } )
 }
