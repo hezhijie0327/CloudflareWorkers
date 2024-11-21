@@ -1,4 +1,4 @@
-// Current Version: 1.0.8
+// Current Version: 1.0.9
 // Description: Using Cloudflare Workers to proxy download everything.
 
 addEventListener( 'fetch', event =>
@@ -59,10 +59,10 @@ async function handleRequest ( request )
             headers: response.headers
         } )
 
-        modifiedResponse.headers.set( 'Cache-Control', 'no-store' )
-        modifiedResponse.headers.set( 'Access-Control-Allow-Origin', '*' )
-        modifiedResponse.headers.set( 'Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE' )
         modifiedResponse.headers.set( 'Access-Control-Allow-Headers', '*' )
+        modifiedResponse.headers.set( 'Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE' )
+        modifiedResponse.headers.set( 'Access-Control-Allow-Origin', '*' )
+        modifiedResponse.headers.set( 'Cache-Control', 'no-store' )
 
         return modifiedResponse
     } catch ( error )
