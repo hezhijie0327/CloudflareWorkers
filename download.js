@@ -1,4 +1,4 @@
-// Current Version: 1.0.9
+// Current Version: 1.1.0
 // Description: Using Cloudflare Workers to proxy download everything.
 
 addEventListener( 'fetch', event =>
@@ -12,14 +12,15 @@ async function handleRequest ( request )
     {
         const url = new URL( request.url )
 
-        const urlStr = request.url;
-        const urlObj = new URL(urlStr);
+        const urlStr = request.url
+        const urlObj = new URL( urlStr )
 
         let path = decodeURIComponent(
-            urlObj.href.substring(urlObj.origin.length + 1)
-        ).replace(/^https?:\/+/, 'https://');
+            urlObj.href.substring( urlObj.origin.length + 1 )
+        ).replace( /^.*\/(https?:\/)/, '$1' )
+            .replace( /^(https?:\/)(?!\/)/, '$1/' )
 
-        const targetUrl = path + urlObj.search + urlObj.hash;
+        const targetUrl = path + urlObj.search + urlObj.hash
 
         const headers = new Headers( [ ...request.headers ].filter( ( [ name ] ) => !name.startsWith( 'cf-' ) ) )
 
