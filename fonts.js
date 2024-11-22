@@ -1,5 +1,5 @@
 // Current Version: 1.0.6
-// Description: Using Cloudflare Workers to speed up fonts.googleapis.com and fonts.gstatic.com's visting.
+// Description: Using Cloudflare Workers to speed up fonts.googleapis.com and fonts.gstatic.com's visiting.
 
 addEventListener( "fetch", event =>
 {
