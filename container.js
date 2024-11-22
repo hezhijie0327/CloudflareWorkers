@@ -1,4 +1,4 @@
-// Current Version: 1.0.4
+// Current Version: 1.0.5
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -38,49 +38,47 @@ async function fetchHandler ( e )
             return fetch( new Request( `https://${ authHostname }${ url.pathname }${ url.search }`, e.request ) )
         }
 
-        let response = await fetch( new Request( url, {
+        let res = await fetch( new Request( url, {
             headers: {
                 'Host': url.hostname,
                 ...( e.request.headers.has( 'Authorization' ) && { Authorization: e.request.headers.get( 'Authorization' ) } )
             }
         } ), e.request )
 
-        let tempHeaders = new Headers( response.headers )
-
-        if ( tempHeaders.has( 'WWW-Authenticate' ) )
-        {
-            const authRegex = url.hostname === 'registry-1.docker.io'
-                ? /https:\/\/auth\.(ipv6\.)?docker\.(io|com)/g
-                : `/https://${ url.hostname }/g`
-
-            tempHeaders.set( 'WWW-Authenticate', tempHeaders.get( 'WWW-Authenticate' ).replace(
-                authRegex,
-                `https://${ e.request.url.split( '/' )[ 2 ] }`
-            ) )
+        let resHdr = new Headers( res.headers )
+        const commonHeaders = {
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Methods': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'no-store'
         }
+        Object.entries( commonHeaders ).forEach( ( [ key, value ] ) => resHdr.set( key, value ) )
 
-        if ( tempHeaders.get( 'Location' ) )
+        if ( resHdr.has( 'Location' ) )
         {
-            const res = await fetch( new Request( tempHeaders.get( 'Location' ), {
+            res = await fetch( new Request( resHdr.get( 'Location' ), {
                 body: e.request.body,
                 headers: e.request.headers,
                 method: e.request.method,
                 redirect: 'follow'
             } ) )
 
-            const resHdr = new Headers( res.headers )
-            const commonHeaders = {
-                'Access-Control-Allow-Headers': '*',
-                'Access-Control-Allow-Methods': '*',
-                'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 'no-store'
-            }
-            Object.entries( commonHeaders ).forEach( ( [ key, value ] ) => resHdr.set( key, value ) )
-
-            return new Response( res.body, { headers: resHdr, status: res.status } )
+            return new Response( res.body, { headers: res.headers, status: res.status } )
         }
 
-        return new Response( response.body, { status: response.status, headers: tempHeaders } )
+        if ( resHdr.has( 'WWW-Authenticate' ) )
+        {
+            const authRegex = url.hostname === 'registry-1.docker.io'
+                ? /https:\/\/auth\.(ipv6\.)?docker\.(io|com)/g
+                : `/https://${ url.hostname }/g`
+
+            resHdr.set( 'WWW-Authenticate', resHdr.get( 'WWW-Authenticate' ).replace(
+                authRegex,
+                `https://${ e.request.url.split( '/' )[ 2 ] }`
+            ) )
+        }
+
+        return new Response( res.body, { status: res.status, headers: resHdr } )
     } catch ( error )
     {
         return new Response( JSON.stringify( { error: error.message } ), {
