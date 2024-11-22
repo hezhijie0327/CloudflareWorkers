@@ -1,4 +1,4 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to update your DNS record.
 
 addEventListener( "fetch", event =>
@@ -11,144 +11,91 @@ async function handleRequest ( request )
     const headers = request.headers
 
     const [ xAuthEmail, xAuthKey ] = ( headers.get( "Authorization" ) || '' ).replace( 'Bearer ', '' ).split( ':' )
+    const authData = { xAuthEmail, xAuthKey }
 
     const requestUrl = new URL( request.url )
     const params = requestUrl.searchParams
-
-    const operation = ( params.get( "operation" ) || 'CREATE' ).toUpperCase()
-    const recordName = params.get( "record_name" ) || null
-    const recordProxy = params.get( "record_proxy" ) === 'false'
-    const recordTTL = Number( params.get( "record_ttl" ) ) || 0
-    const recordType = ( params.get( "record_type" ) || 'A' ).toUpperCase()
-    const recordValue = params.get( "record_value" ) || headers.get( "CF-Connecting-IP" ) || null
-    const zoneName = recordName ? recordName.split( '.' ).slice( -2 ).join( '.' ) : null
-
-    if ( !xAuthEmail || !xAuthKey )
-    {
-        return new Response(
-            JSON.stringify( { error: "Missing X-Auth-Email or X-Auth-Key" } ),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-        )
+    const requestData = {
+        operation: ( params.get( "operation" ) || 'CREATE' ).toUpperCase(),
+        recordName: params.get( "record_name" ) || null,
+        recordProxy: params.get( "record_proxy" ) === 'false',
+        recordTTL: Number( params.get( "record_ttl" ) ) || 0,
+        recordType: ( params.get( "record_type" ) || 'A' ).toUpperCase(),
+        recordValue: params.get( "record_value" ) || headers.get( "CF-Connecting-IP" ) || null,
+        zoneName: params.get( "record_name" )
+            ? params.get( "record_name" ).split( '.' ).slice( -2 ).join( '.' )
+            : null,
     }
 
-    const accountName = await getAccountName( xAuthEmail, xAuthKey )
-    if ( !accountName )
+    const zoneID = await getZoneID( authData.xAuthEmail, authData.xAuthKey, requestData.zoneName )
+    const recordID = await getRecordID( authData.xAuthEmail, authData.xAuthKey, zoneID, requestData.recordName, requestData.recordType )
+    const recordData = { recordID, zoneID }
+
+    const debug = { authData, recordData, requestData, }
+
+    let result = false
+
+    if ( !authData.xAuthEmail || !authData.xAuthKey )
     {
-        return new Response(
-            JSON.stringify( { error: "Account Name Not Found" } ),
-            { status: 404, headers: { "Content-Type": "application/json" } }
-        )
+        return new Response( JSON.stringify( { debug, result } ), { status: 401, headers: { "Content-Type": "application/json" } } )
     }
 
-    const zoneID = await getZoneID( xAuthEmail, xAuthKey, zoneName )
-    if ( !zoneID )
-    {
-        return new Response(
-            JSON.stringify( { error: "Zone ID Not Found" } ),
-            { status: 404, headers: { "Content-Type": "application/json" } }
-        )
-    }
-
-    let result
-    switch ( operation )
+    switch ( requestData.operation )
     {
         case 'CREATE':
-            result = await ddnsCreateRecord( xAuthEmail, xAuthKey, zoneID, recordName, recordType, recordValue, recordTTL, recordProxy === 'false' )
-            return result
-                ? new Response( JSON.stringify( {
-                    message: "Record created successfully.",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType,
-                    recordValue,
-                    recordTTL,
-                    recordProxy
-                } ), { status: 200 } )
-                : new Response( JSON.stringify( {
-                    error: "Failed to create record.",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType,
-                    recordValue,
-                    recordTTL,
-                    recordProxy
-                } ), { status: 500 } )
+            result = await ddnsCreateRecord( authData.xAuthEmail, authData.xAuthKey, recordData.zoneID, requestData.recordName, requestData.recordType, requestData.recordValue, requestData.recordTTL, requestData.recordProxy )
 
         case 'UPDATE':
-            const recordID = await getRecordID( xAuthEmail, xAuthKey, zoneID, recordName, recordType )
-            if ( !recordID )
+            if ( recordData.recordID )
             {
-                return new Response( JSON.stringify( {
-                    error: "Record ID Not Found",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType
-                } ), { status: 404, headers: { "Content-Type": "application/json" } } )
+                result = await ddnsUpdateRecord( authData.xAuthEmail, authData.xAuthKey, recordData.zoneID, recordData.recordID, requestData.recordName, requestData.recordType, requestData.recordValue, requestData.recordTTL, requestData.recordProxy )
             }
-            result = await ddnsUpdateRecord( xAuthEmail, xAuthKey, zoneID, recordID, recordName, recordType, recordValue, recordTTL, recordProxy === 'false' )
-            return result
-                ? new Response( JSON.stringify( {
-                    message: "Record updated successfully.",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType,
-                    recordValue,
-                    recordTTL,
-                    recordProxy
-                } ), { status: 200 } )
-                : new Response( JSON.stringify( {
-                    error: "Failed to update record.",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType,
-                    recordValue,
-                    recordTTL,
-                    recordProxy
-                } ), { status: 500 } )
 
         case 'DELETE':
-            const deleteRecordID = await getRecordID( xAuthEmail, xAuthKey, zoneID, recordName, recordType )
-            if ( !deleteRecordID )
+            if ( recordData.recordID )
             {
-                return new Response( JSON.stringify( {
-                    error: "Record ID Not Found",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType
-                } ), { status: 404, headers: { "Content-Type": "application/json" } } )
+                result = await ddnsDeleteRecord( authData.xAuthEmail, authData.xAuthKey, recordData.zoneID, recordData.recordID )
             }
-            result = await ddnsDeleteRecord( xAuthEmail, xAuthKey, zoneID, deleteRecordID )
-            return result
-                ? new Response( JSON.stringify( {
-                    message: "Record deleted successfully.",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType
-                } ), { status: 200 } )
-                : new Response( JSON.stringify( {
-                    error: "Failed to delete record.",
-                    operation,
-                    zoneName,
-                    recordName,
-                    recordType
-                } ), { status: 500 } )
-
-        default:
-            return new Response( JSON.stringify( {
-                error: "Invalid operation.",
-                operation,
-                zoneName,
-                recordName
-            } ), { status: 400, headers: { "Content-Type": "application/json" } } )
     }
 
+    return new Response( JSON.stringify( { debug, result } ), { status: result ? 200 : 500 } )
+}
+
+async function getRecordID ( XAuthEmail, XAuthKey, ZoneID, RecordName, RecordType )
+{
+    const url = `https://api.cloudflare.com/client/v4/zones/${ ZoneID }/dns_records?name=${ RecordName }`
+
+    const response = await fetch( url, {
+        method: "GET",
+        headers: {
+            "X-Auth-Email": XAuthEmail,
+            "X-Auth-Key": XAuthKey,
+            "Content-Type": "application/json",
+        },
+    } )
+    const data = await response.json()
+    if ( data.success && data.result.length > 0 )
+    {
+        const record = data.result.find( record => record.type === RecordType )
+        return record ? record.id : null
+    }
+    return null
+}
+
+async function getZoneID ( XAuthEmail, XAuthKey, ZoneName )
+{
+    const url = `https://api.cloudflare.com/client/v4/zones?name=${ ZoneName }`
+
+    const response = await fetch( url, {
+        method: "GET",
+        headers: {
+            "X-Auth-Email": XAuthEmail,
+            "X-Auth-Key": XAuthKey,
+            "Content-Type": "application/json",
+        },
+    } )
+    const data = await response.json()
+    return data.success && data.result.length > 0 ? data.result[ 0 ].id : null
 }
 
 async function ddnsCreateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordName, RecordType, RecordValue, RecordTTL, RecordProxy )
@@ -156,24 +103,17 @@ async function ddnsCreateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordName, Reco
     const url = `https://api.cloudflare.com/client/v4/zones/${ ZoneID }/dns_records`
     const requestData = { type: RecordType, name: RecordName, content: RecordValue, ttl: RecordTTL, proxied: RecordProxy }
 
-    try
-    {
-        const response = await fetch( url, {
-            method: 'POST',
-            headers: {
-                'X-Auth-Email': XAuthEmail,
-                'X-Auth-Key': XAuthKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify( requestData )
-        } )
-        const data = await response.json()
-        return data.success === true
-    } catch ( error )
-    {
-        console.error( error )
-        return false
-    }
+    const response = await fetch( url, {
+        method: 'POST',
+        headers: {
+            'X-Auth-Email': XAuthEmail,
+            'X-Auth-Key': XAuthKey,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify( requestData )
+    } )
+    const data = await response.json()
+    return data.success === true
 }
 
 async function ddnsUpdateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordID, RecordName, RecordType, RecordValue, RecordTTL, RecordProxy )
@@ -181,119 +121,31 @@ async function ddnsUpdateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordID, Record
     const url = `https://api.cloudflare.com/client/v4/zones/${ ZoneID }/dns_records/${ RecordID }`
     const requestData = { type: RecordType, name: RecordName, content: RecordValue, ttl: RecordTTL, proxied: RecordProxy }
 
-    try
-    {
-        const response = await fetch( url, {
-            method: 'PUT',
-            headers: {
-                'X-Auth-Email': XAuthEmail,
-                'X-Auth-Key': XAuthKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify( requestData )
-        } )
-        const data = await response.json()
-        return data.success === true
-    } catch ( error )
-    {
-        console.error( error )
-        return false
-    }
+    const response = await fetch( url, {
+        method: 'PUT',
+        headers: {
+            'X-Auth-Email': XAuthEmail,
+            'X-Auth-Key': XAuthKey,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify( requestData )
+    } )
+    const data = await response.json()
+    return data.success === true
 }
 
 async function ddnsDeleteRecord ( XAuthEmail, XAuthKey, ZoneID, RecordID )
 {
     const url = `https://api.cloudflare.com/client/v4/zones/${ ZoneID }/dns_records/${ RecordID }`
 
-    try
-    {
-        const response = await fetch( url, {
-            method: 'DELETE',
-            headers: {
-                'X-Auth-Email': XAuthEmail,
-                'X-Auth-Key': XAuthKey,
-                'Content-Type': 'application/json'
-            }
-        } )
-        const data = await response.json()
-        return data.success === true
-    } catch ( error )
-    {
-        console.error( error )
-        return false
-    }
-}
-
-async function getRecordID ( XAuthEmail, XAuthKey, ZoneID, RecordName, RecordType )
-{
-    const url = `https://api.cloudflare.com/client/v4/zones/${ ZoneID }/dns_records?name=${ RecordName }`
-
-    try
-    {
-        const response = await fetch( url, {
-            method: "GET",
-            headers: {
-                "X-Auth-Email": XAuthEmail,
-                "X-Auth-Key": XAuthKey,
-                "Content-Type": "application/json",
-            },
-        } )
-        const data = await response.json()
-        if ( data.success && data.result.length > 0 )
-        {
-            const record = data.result.find( record => record.type === RecordType )
-            return record ? record.id : null
+    const response = await fetch( url, {
+        method: 'DELETE',
+        headers: {
+            'X-Auth-Email': XAuthEmail,
+            'X-Auth-Key': XAuthKey,
+            'Content-Type': 'application/json'
         }
-        return null
-    } catch ( error )
-    {
-        console.error( error )
-        return null
-    }
-}
-
-async function getZoneID ( XAuthEmail, XAuthKey, ZoneName )
-{
-    const url = `https://api.cloudflare.com/client/v4/zones?name=${ ZoneName }`
-
-    try
-    {
-        const response = await fetch( url, {
-            method: "GET",
-            headers: {
-                "X-Auth-Email": XAuthEmail,
-                "X-Auth-Key": XAuthKey,
-                "Content-Type": "application/json",
-            },
-        } )
-        const data = await response.json()
-        return data.success && data.result.length > 0 ? data.result[ 0 ].id : null
-    } catch ( error )
-    {
-        console.error( error )
-        return null
-    }
-}
-
-async function getAccountName ( XAuthEmail, XAuthKey )
-{
-    const url = "https://api.cloudflare.com/client/v4/accounts?page=1&per_page=5&direction=desc"
-
-    try
-    {
-        const response = await fetch( url, {
-            method: "GET",
-            headers: {
-                "X-Auth-Email": XAuthEmail,
-                "X-Auth-Key": XAuthKey,
-                "Content-Type": "application/json",
-            },
-        } )
-        const data = await response.json()
-        return data.success && data.result.length > 0 ? data.result[ 0 ].name : null
-    } catch ( error )
-    {
-        console.error( error )
-        return null
-    }
+    } )
+    const data = await response.json()
+    return data.success === true
 }
