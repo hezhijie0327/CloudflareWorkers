@@ -1,4 +1,4 @@
-// Current Version: 1.0.3
+// Current Version: 1.0.4
 // Description: Using Cloudflare Workers to update your DNS record.
 
 addEventListener( "fetch", event =>
@@ -36,7 +36,7 @@ async function handleRequest ( request )
     {
         return new Response(
             JSON.stringify( { error: "Account Name Not Found" } ),
-            { status: 401, headers: { "Content-Type": "application/json" } }
+            { status: 404, headers: { "Content-Type": "application/json" } }
         )
     }
 
@@ -45,7 +45,7 @@ async function handleRequest ( request )
     {
         return new Response(
             JSON.stringify( { error: "Zone ID Not Found" } ),
-            { status: 401, headers: { "Content-Type": "application/json" } }
+            { status: 404, headers: { "Content-Type": "application/json" } }
         )
     }
 
