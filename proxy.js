@@ -1,4 +1,4 @@
-// Current Version: 1.1.5
+// Current Version: 1.1.6
 // Description: Using Cloudflare Workers to Reverse Proxy everything.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -38,10 +38,16 @@ async function fetchHandler ( e )
         }
         Object.entries( commonHeaders ).forEach( ( [ key, value ] ) => resHdr.set( key, value ) )
 
-        if ( resHdr.has( 'Location' ) )
+        if ( [ 301, 302, 303, 307, 308 ].includes( res.status ) && resHdr.has( 'Location' ) )
         {
-            return fetchHandler( {
-                request: new Request( resHdr.get( 'Location' ), { ...req, redirect: 'manual' } )
+            const location = resHdr.get( 'Location' )
+            const absoluteLocation = new URL( location, targetUrl )
+
+            const modifiedLocation = `${ urlObj.protocol }//${ urlObj.host }/${ absoluteLocation.toString() }`
+            resHdr.set( 'Location', modifiedLocation )
+            return new Response( null, {
+                status: res.status,
+                headers: resHdr,
             } )
         }
 
