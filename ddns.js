@@ -1,4 +1,4 @@
-// Current Version: 1.0.4
+// Current Version: 1.0.5
 // Description: Using Cloudflare Workers to update your DNS record.
 
 addEventListener( "fetch", event =>
@@ -16,10 +16,10 @@ async function handleRequest ( request )
     const params = requestUrl.searchParams
 
     const operation = ( params.get( "operation" ) || 'CREATE' ).toUpperCase()
-    const recordProxy = params.get( "record_proxy" ) || 'false'
     const recordName = params.get( "record_name" ) || null
+    const recordProxy = params.get( "record_proxy" ) === 'false'
+    const recordTTL = Number( params.get( "record_ttl" ) ) || 0
     const recordType = ( params.get( "record_type" ) || 'A' ).toUpperCase()
-    const recordTTL = params.get( "record_ttl" ) || 0
     const recordValue = params.get( "record_value" ) || headers.get( "CF-Connecting-IP" ) || null
     const zoneName = recordName ? recordName.split( '.' ).slice( -2 ).join( '.' ) : null
 
