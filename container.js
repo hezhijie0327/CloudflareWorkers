@@ -1,4 +1,4 @@
-// Current Version: 1.0.3
+// Current Version: 1.0.4
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -15,6 +15,7 @@ async function fetchHandler ( e )
             'gcr': 'gcr.io',
             'ghcr': 'ghcr.io',
             'k8s': 'k8s.gcr.io',
+            'nvcr': 'nvcr.io',
             'quay': 'quay.io',
         }
 
