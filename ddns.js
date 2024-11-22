@@ -1,3 +1,6 @@
+// Current Version: 1.0.0
+// Description: Using Cloudflare Workers to update your DNS record.
+
 addEventListener( "fetch", ( event ) =>
 {
     event.respondWith( handleRequest( event.request ) )
