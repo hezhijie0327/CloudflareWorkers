@@ -10,8 +10,8 @@ async function handleRequest ( request )
 {
     const headers = request.headers
 
-    const XAuthEmail = headers.get( "X-Auth-Email" ) || null
-    const XAuthKey = headers.get( "X-Auth-Key" ) || null
+    const xAuthEmail = headers.get( "X-Auth-Email" ) || null
+    const xAuthKey = headers.get( "X-Auth-Key" ) || null
 
     const requestUrl = new URL( request.url )
     const params = requestUrl.searchParams
@@ -24,7 +24,7 @@ async function handleRequest ( request )
     const recordValue = params.get( "record_value" ) || headers.get( "CF-Connecting-IP" ) || null
     const zoneName = params.get( "zone_name" ) || null
 
-    if ( !XAuthEmail || !XAuthKey )
+    if ( !xAuthEmail || !xAuthKey )
     {
         return new Response(
             JSON.stringify( { error: "Missing X-Auth-Email or X-Auth-Key" } ),
@@ -32,7 +32,7 @@ async function handleRequest ( request )
         )
     }
 
-    const accountName = await getAccountName( XAuthEmail, XAuthKey )
+    const accountName = await getAccountName( xAuthEmail, xAuthKey )
     if ( !accountName )
     {
         return new Response(
@@ -41,7 +41,7 @@ async function handleRequest ( request )
         )
     }
 
-    const zoneID = await getZoneID( XAuthEmail, XAuthKey, zoneName )
+    const zoneID = await getZoneID( xAuthEmail, xAuthKey, zoneName )
     if ( !zoneID )
     {
         return new Response(
@@ -54,7 +54,7 @@ async function handleRequest ( request )
     switch ( operation )
     {
         case 'CREATE':
-            result = await ddnsCreateRecord( XAuthEmail, XAuthKey, zoneID, recordName, recordType, recordValue, recordTTL, recordProxy === 'true' )
+            result = await ddnsCreateRecord( xAuthEmail, xAuthKey, zoneID, recordName, recordType, recordValue, recordTTL, recordProxy === 'false' )
             return result
                 ? new Response( JSON.stringify( {
                     message: "Record created successfully.",
@@ -78,7 +78,7 @@ async function handleRequest ( request )
                 } ), { status: 500 } )
 
         case 'UPDATE':
-            const recordID = await getRecordID( XAuthEmail, XAuthKey, zoneID, recordName, recordType )
+            const recordID = await getRecordID( xAuthEmail, xAuthKey, zoneID, recordName, recordType )
             if ( !recordID )
             {
                 return new Response( JSON.stringify( {
@@ -89,7 +89,7 @@ async function handleRequest ( request )
                     recordType
                 } ), { status: 404, headers: { "Content-Type": "application/json" } } )
             }
-            result = await ddnsUpdateRecord( XAuthEmail, XAuthKey, zoneID, recordID, recordName, recordType, recordValue, recordTTL, recordProxy === 'true' )
+            result = await ddnsUpdateRecord( xAuthEmail, xAuthKey, zoneID, recordID, recordName, recordType, recordValue, recordTTL, recordProxy === 'false' )
             return result
                 ? new Response( JSON.stringify( {
                     message: "Record updated successfully.",
@@ -113,7 +113,7 @@ async function handleRequest ( request )
                 } ), { status: 500 } )
 
         case 'DELETE':
-            const deleteRecordID = await getRecordID( XAuthEmail, XAuthKey, zoneID, recordName, recordType )
+            const deleteRecordID = await getRecordID( xAuthEmail, xAuthKey, zoneID, recordName, recordType )
             if ( !deleteRecordID )
             {
                 return new Response( JSON.stringify( {
@@ -124,7 +124,7 @@ async function handleRequest ( request )
                     recordType
                 } ), { status: 404, headers: { "Content-Type": "application/json" } } )
             }
-            result = await ddnsDeleteRecord( XAuthEmail, XAuthKey, zoneID, deleteRecordID )
+            result = await ddnsDeleteRecord( xAuthEmail, xAuthKey, zoneID, deleteRecordID )
             return result
                 ? new Response( JSON.stringify( {
                     message: "Record deleted successfully.",
@@ -152,10 +152,10 @@ async function handleRequest ( request )
 
 }
 
-async function ddnsCreateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordName, Type, WANIP, TTL, ProxyStatus )
+async function ddnsCreateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordName, RecordType, RecordValue, RecordTTL, RecordProxy )
 {
     const url = `https://api.cloudflare.com/client/v4/zones/${ ZoneID }/dns_records`
-    const requestData = { type: Type, name: RecordName, content: WANIP, ttl: TTL, proxied: ProxyStatus }
+    const requestData = { type: RecordType, name: RecordName, content: RecordValue, ttl: RecordTTL, proxied: RecordProxy }
 
     try
     {
@@ -177,10 +177,10 @@ async function ddnsCreateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordName, Type
     }
 }
 
-async function ddnsUpdateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordID, RecordName, Type, WANIP, TTL, ProxyStatus )
+async function ddnsUpdateRecord ( XAuthEmail, XAuthKey, ZoneID, RecordID, RecordName, RecordType, RecordValue, RecordTTL, RecordProxy )
 {
     const url = `https://api.cloudflare.com/client/v4/zones/${ ZoneID }/dns_records/${ RecordID }`
-    const requestData = { type: Type, name: RecordName, content: WANIP, ttl: TTL, proxied: ProxyStatus }
+    const requestData = { type: RecordType, name: RecordName, content: RecordValue, ttl: RecordTTL, proxied: RecordProxy }
 
     try
     {
