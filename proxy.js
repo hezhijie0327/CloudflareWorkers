@@ -1,4 +1,4 @@
-// Current Version: 1.1.3
+// Current Version: 1.1.4
 // Description: Using Cloudflare Workers to Reverse Proxy everything.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -13,12 +13,28 @@ async function fetchHandler ( e )
             ? `https://${ urlObj.host }/${ urlObj.searchParams.get( 'q' ) }`
             : urlObj.href.substring( urlObj.origin.length + 1 ).replace( /^https?:\/+/, 'https://' )
 
-        const res = await fetch( targetUrl, { body: req.body, headers: req.headers, method: req.method, redirect: 'manual' } )
+        const filteredHeaders = new Headers()
+        req.headers.forEach( ( value, key ) =>
+        {
+            if ( !key.toLowerCase().startsWith( 'cf-' ) )
+            {
+                filteredHeaders.set( key, value )
+            }
+        } )
+
+        const res = await fetch( targetUrl, {
+            body: req.body,
+            headers: filteredHeaders,
+            method: req.method,
+            redirect: 'manual'
+        } )
         const resHdr = new Headers( res.headers )
 
         if ( resHdr.has( 'Location' ) )
         {
-            return fetchHandler( { request: new Request( resHdr.get( 'Location' ), { ...req, redirect: 'manual' } ) } )
+            return fetchHandler( {
+                request: new Request( resHdr.get( 'Location' ), { ...req, redirect: 'manual' } )
+            } )
         }
 
         resHdr.set( 'Access-Control-Allow-Headers', '*' )
@@ -29,7 +45,7 @@ async function fetchHandler ( e )
         if ( resHdr.get( "Content-Type" )?.includes( "text/html" ) )
         {
             const body = ( await res.text() ).replace(
-                /((href|src|action)=["'])\/(?!\/)/g,
+                /((action|href|src)=["'])\/(?!\/)/g,
                 `$1${ urlObj.protocol }//${ urlObj.host }/${ new URL( targetUrl ).origin }/`
             )
             return new Response( body, { headers: resHdr, status: res.status } )
