@@ -1,4 +1,4 @@
-// Current Version: 1.0.5
+// Current Version: 1.0.6
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -78,7 +78,7 @@ async function fetchHandler ( e )
             ) )
         }
 
-        return new Response( res.body, { status: res.status, headers: resHdr } )
+        return new Response( res.body, { headers: resHdr, status: res.status } )
     } catch ( error )
     {
         return new Response( JSON.stringify( { error: error.message } ), {
