@@ -1,4 +1,4 @@
-// Current Version: 1.0.2
+// Current Version: 1.0.3
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -27,13 +27,14 @@ async function fetchHandler ( e )
 
         url.hostname = domainMapping[ subdomain ]
 
-        if (url.hostname === 'registry-1.docker.io' && url.pathname === '/token') {
-            const ip = e.request.headers.get('CF-Connecting-IP') || '127.0.0.1'
-            const authHostname = /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)
-                ? (Math.random() < 0.5 ? 'auth.docker.com' : 'auth.docker.io')
+        if ( url.hostname === 'registry-1.docker.io' && url.pathname === '/token' )
+        {
+            const ip = e.request.headers.get( 'CF-Connecting-IP' ) || '127.0.0.1'
+            const authHostname = /^(\d{1,3}\.){3}\d{1,3}$/.test( ip )
+                ? ( Math.random() < 0.5 ? 'auth.docker.com' : 'auth.docker.io' )
                 : 'auth.ipv6.docker.com'
 
-            return fetch(new Request(`https://${authHostname}${url.pathname}${url.search}`, e.request))
+            return fetch( new Request( `https://${ authHostname }${ url.pathname }${ url.search }`, e.request ) )
         }
 
         let response = await fetch( new Request( url, {
@@ -65,14 +66,17 @@ async function fetchHandler ( e )
                 method: e.request.method,
                 redirect: 'follow'
             } ) )
-            const resHdrNew = new Headers( res.headers )
 
-            resHdrNew.set( 'Access-Control-Allow-Headers', '*' )
-            resHdrNew.set( 'Access-Control-Allow-Methods', '*' )
-            resHdrNew.set( 'Access-Control-Allow-Origin', '*' )
-            resHdrNew.set( 'Cache-Control', 'no-store' )
+            const resHdr = new Headers( res.headers )
+            const commonHeaders = {
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'no-store'
+            }
+            Object.entries( commonHeaders ).forEach( ( [ key, value ] ) => resHdr.set( key, value ) )
 
-            return new Response( res.body, { headers: resHdrNew, status: res.status } )
+            return new Response( res.body, { headers: resHdr, status: res.status } )
         }
 
         return new Response( response.body, { status: response.status, headers: tempHeaders } )
