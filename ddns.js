@@ -5,24 +5,23 @@ addEventListener( "fetch", ( event ) =>
 
 async function handleRequest ( request )
 {
-    // 解析 URL 查询参数
-    const requestUrl = new URL( request.url )
-
-    const params = requestUrl.searchParams
-    const operation = ( params.get( "operation" ) || 'GET' ).toUpperCase()
-    const recordProxy = params.get( "record_proxy" ) || 'false'
-    const recordName = params.get( "record_name" ) || null
-    const recordType = ( params.get( "record_type" ) || 'A' ).toUpperCase()
-    const recordTTL = params.get( "record_ttl" ) || 0
-    const zoneName = params.get( "zone_name" ) || null
-
     // 从请求头中获取 X-Auth-Email 和 X-Auth-Key
     const headers = request.headers
     const XAuthEmail = headers.get( "X-Auth-Email" ) || null
     const XAuthKey = headers.get( "X-Auth-Key" ) || null
-    const CFConnectingIP = headers.get( "CF-Connecting-IP" ) || null
 
-    // 如果认证信息缺失，返回错误响应
+    // 解析 URL 查询参数
+    const requestUrl = new URL( request.url )
+
+    const params = requestUrl.searchParams
+    const operation = ( params.get( "operation" ) || 'CREATE' ).toUpperCase()
+    const recordProxy = params.get( "record_proxy" ) || 'false'
+    const recordName = params.get( "record_name" ) || null
+    const recordType = ( params.get( "record_type" ) || 'A' ).toUpperCase()
+    const recordTTL = params.get( "record_ttl" ) || 0
+    const recordValue = params.get( "record_value" ) || headers.get( "CF-Connecting-IP" ) || null
+    const zoneName = params.get( "zone_name" ) || null
+
     if ( !XAuthEmail || !XAuthKey )
     {
         return new Response(
@@ -31,7 +30,6 @@ async function handleRequest ( request )
         )
     }
 
-    // 调用 getAccountName 函数获取账户名称
     const accountName = await getAccountName( XAuthEmail, XAuthKey )
     if ( !accountName )
     {
@@ -50,35 +48,53 @@ async function handleRequest ( request )
         )
     }
 
-    const recordID = await getRecordID( XAuthEmail, XAuthKey, zoneID, recordName, recordType )
-    if ( !recordID )
-    {
-        return new Response(
-            JSON.stringify( { error: "Record ID Not Found" } ),
-            { status: 401, headers: { "Content-Type": "application/json" } }
-        )
-    }
 
-    const recordValue = await getRecordValue( XAuthEmail, XAuthKey, zoneID, recordID )
-    if ( !recordValue )
+    let result
+    switch ( operation )
     {
-        return new Response(
-            JSON.stringify( { error: "Record Value Not Found" } ),
-            { status: 401, headers: { "Content-Type": "application/json" } }
-        )
-    }
+        case 'CREATE':
+            result = await ddnsCreateRecord( XAuthEmail, XAuthKey, zoneID, recordName, recordType, recordValue, recordTTL, recordProxy === 'true' )
+            if ( result )
+            {
+                return new Response( JSON.stringify( { message: "Record created successfully." } ), { status: 200 } )
+            } else
+            {
+                return new Response( JSON.stringify( { error: "Failed to create record." } ), { status: 500 } )
+            }
 
-    // 返回解析后的响应
-    return new Response(
-        JSON.stringify( {
-            accountName,
-            zoneID,
-            recordID,
-            recordValue,
-            recordProxy
-        } ),
-        { headers: { "Content-Type": "application/json" } }
-    )
+        case 'UPDATE':
+            const recordID = await getRecordID( XAuthEmail, XAuthKey, zoneID, recordName, recordType )
+            if ( !recordID )
+            {
+                return new Response( JSON.stringify( { error: "Record ID Not Found" } ), { status: 404, headers: { "Content-Type": "application/json" } } )
+            }
+            result = await ddnsUpdateRecord( XAuthEmail, XAuthKey, zoneID, recordID, recordName, recordType, recordValue, recordTTL, recordProxy === 'true' )
+            if ( result )
+            {
+                return new Response( JSON.stringify( { message: "Record updated successfully." } ), { status: 200 } )
+            } else
+            {
+                return new Response( JSON.stringify( { error: "Failed to update record." } ), { status: 500 } )
+            }
+
+        case 'DELETE':
+            const deleteRecordID = await getRecordID( XAuthEmail, XAuthKey, zoneID, recordName, recordType )
+            if ( !deleteRecordID )
+            {
+                return new Response( JSON.stringify( { error: "Record ID Not Found" } ), { status: 404, headers: { "Content-Type": "application/json" } } )
+            }
+            result = await ddnsDeleteRecord( XAuthEmail, XAuthKey, zoneID, deleteRecordID )
+            if ( result )
+            {
+                return new Response( JSON.stringify( { message: "Record deleted successfully." } ), { status: 200 } )
+            } else
+            {
+                return new Response( JSON.stringify( { error: "Failed to delete record." } ), { status: 500 } )
+            }
+
+        default:
+            return new Response( JSON.stringify( { error: "Invalid operation." } ), { status: 400, headers: { "Content-Type": "application/json" } } )
+    }
 }
 
 // 发送 POST 请求并处理响应
