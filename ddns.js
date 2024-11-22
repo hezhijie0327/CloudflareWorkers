@@ -72,6 +72,105 @@ async function handleRequest(request) {
   );
 }
 
+// 发送 POST 请求并处理响应
+async function ddnsCreateRecord(XAuthEmail, XAuthKey, ZoneID, RecordName, Type, WANIP, TTL, ProxyStatus) {
+    const url = `https://api.cloudflare.com/client/v4/zones/${ZoneID}/dns_records`;
+  
+    const requestData = {
+      type: Type,
+      name: RecordName,
+      content: WANIP,
+      ttl: TTL,
+      proxied: ProxyStatus
+    };
+  
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-Auth-Email': XAuthEmail,
+          'X-Auth-Key': XAuthKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+  
+      const data = await response.json();
+  
+      if (data.success === true) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+  
+  // 发送 PUT 请求并处理响应
+  async function ddnsUpdateRecord(XAuthEmail, XAuthKey, ZoneID, RecordID, RecordName, Type, WANIP, TTL, ProxyStatus) {
+    const url = `https://api.cloudflare.com/client/v4/zones/${ZoneID}/dns_records/${RecordID}`;
+  
+    const requestData = {
+      type: Type,
+      name: RecordName,
+      content: WANIP,
+      ttl: TTL,
+      proxied: ProxyStatus
+    };
+  
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'X-Auth-Email': XAuthEmail,
+          'X-Auth-Key': XAuthKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+  
+      const data = await response.json();
+  
+      if (data.success === true) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+  
+  // 发送 DELETE 请求并处理响应
+  async function ddnsDeleteRecord(XAuthEmail, XAuthKey, ZoneID, RecordID) {
+    const url = `https://api.cloudflare.com/client/v4/zones/${ZoneID}/dns_records/${RecordID}`;
+  
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'X-Auth-Email': XAuthEmail,
+          'X-Auth-Key': XAuthKey,
+          'Content-Type': 'application/json'
+        }
+      });
+  
+      const data = await response.json();
+  
+      if (data.success === true) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+  
 async function getRecordValue(XAuthEmail, XAuthKey, ZoneID, RecordID) {
     const url = `https://api.cloudflare.com/client/v4/zones/${ZoneID}/dns_records/${RecordID}`
 
