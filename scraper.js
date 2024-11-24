@@ -1,4 +1,4 @@
-// Current Version: 1.0.2
+// Current Version: 1.0.3
 // Description: Using Cloudflare Workers for web scraping.
 
 addEventListener( 'fetch', ( event ) =>
@@ -9,20 +9,17 @@ addEventListener( 'fetch', ( event ) =>
 async function handleRequest ( request )
 {
     const { searchParams } = new URL( request.url )
-    let url = searchParams.get( 'url' )
-    if ( url && !url.match( /^[a-zA-Z]+:\/\// ) ) url = 'http://' + url
 
-    const selectors = ( searchParams.get( 'selector' ) || 'p' ).split( ',' ).map( s => s.trim() )
-    if ( !url || !selectors.length ) return new Response( JSON.stringify( { error: 'Missing url or selector parameters' } ), { status: 400 } )
+    let url = searchParams.get( 'url' )
+    const selectors = searchParams.get( 'selector' )?.split( ',' ).map( s => s.trim() )
+    if ( !url || !selectors || selectors.length === 0 )
+    {
+        return new Response( JSON.stringify( { error: 'Missing url or selector parameters' } ), { status: 400 } )
+    }
 
     try
     {
         const response = await fetch( url )
-        const server = response.headers.get( 'server' )
-        if ( [ 530, 503, 502, 403, 400 ].includes( response.status ) && ( server === 'cloudflare' || !server ) )
-        {
-            throw new Error( `Status ${ response.status } requesting ${ url }` )
-        }
 
         const rewriter = new HTMLRewriter()
         const matches = {}
