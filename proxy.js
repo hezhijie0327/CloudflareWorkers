@@ -1,4 +1,4 @@
-// Current Version: 1.1.8
+// Current Version: 1.1.9
 // Description: Using Cloudflare Workers to Reverse Proxy everything.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -9,9 +9,7 @@ async function fetchHandler ( e )
     {
         const req = e.request
         const urlObj = new URL( req.url )
-        const targetUrl = urlObj.searchParams.get( 'q' )
-            ? `https://${ urlObj.host }/${ urlObj.searchParams.get( 'q' ) }`
-            : urlObj.href.substring( urlObj.origin.length + 1 ).replace( /^https?:\/+/, 'https://' )
+        const targetUrl = urlObj.href.slice( urlObj.origin.length + 1 ).replace( /^https?:\/+/, 'https://' )
 
         const filteredHeaders = new Headers()
         req.headers.forEach( ( value, key ) =>
