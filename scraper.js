@@ -1,4 +1,4 @@
-// Current Version: 1.0.0
+// Current Version: 1.0.1
 // Description: Using Cloudflare Workers for web scraping.
 
 addEventListener( 'fetch', ( event ) =>
@@ -13,8 +13,7 @@ async function handleRequest ( request )
     let url = searchParams.get( 'url' )
     if ( url && !url.match( /^[a-zA-Z]+:\/\// ) ) url = 'http://' + url
 
-    const selector = searchParams.get( 'selector' )
-    const attr = searchParams.get( 'attr' )
+    const selector = searchParams.get( 'selector' ) || 'p'
 
     if ( !url || !selector )
     {
@@ -31,7 +30,8 @@ async function handleRequest ( request )
     {
         const response = await fetch( url )
         const server = response.headers.get( 'server' )
-        const isError = [ 530, 503, 502, 403, 400 ].includes( response.status ) &&
+        const isError =
+            [ 530, 503, 502, 403, 400 ].includes( response.status ) &&
             ( server === 'cloudflare' || !server )
 
         if ( isError )
@@ -72,12 +72,14 @@ async function handleRequest ( request )
             matches[ selector ].push( currentText.trim() )
         }
 
-        const result = attr
-            ? matches[ selector ].map( ( el ) => el.getAttribute( attr ) || '' ).filter( Boolean )
-            : matches[ selector ] || []
+        const result = matches[ selector ] || []
 
         return new Response(
-            JSON.stringify( { result: result.length === 1 ? result[ 0 ] : result }, null, 2 ), // Always pretty-print
+            JSON.stringify(
+                { result: result.length === 1 ? result[ 0 ] : result },
+                null,
+                2
+            ), // Always pretty-print
             {
                 headers: {
                     'content-type': 'application/json;charset=UTF-8',
