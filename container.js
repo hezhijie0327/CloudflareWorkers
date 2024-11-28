@@ -1,4 +1,4 @@
-// Current Version: 1.0.7
+// Current Version: 1.0.8
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -12,6 +12,8 @@ async function fetchHandler ( e )
 
         const domainMapping = {
             'docker': 'registry-1.docker.io',
+            'ecr': 'public.ecr.aws',
+            'elastic': 'docker.elastic.co',
             'gcr': 'gcr.io',
             'ghcr': 'ghcr.io',
             'k8s': 'registry.k8s.io',
