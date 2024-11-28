@@ -1,4 +1,4 @@
-// Current Version: 1.0.8
+// Current Version: 1.0.9
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -31,7 +31,7 @@ async function fetchHandler ( e )
 
         url.hostname = domainMapping[ subdomain ]
 
-        if ( url.hostname === 'registry-1.docker.io' && url.pathname === '/token' )
+        if ( url.hostname === domainMapping[ 'docker' ] && url.pathname === '/token' )
         {
             const ip = e.request.headers.get( 'CF-Connecting-IP' ) || '127.0.0.1'
             const authHostname = /^(\d{1,3}\.){3}\d{1,3}$/.test( ip )
