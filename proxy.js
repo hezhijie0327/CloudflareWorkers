@@ -1,4 +1,4 @@
-// Current Version: 1.2.1
+// Current Version: 1.2.2
 // Description: Using Cloudflare Workers to Reverse Proxy everything.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -48,13 +48,20 @@ async function fetchHandler ( e )
             return new Response( null, { status: res.status, headers: resHdr } )
         }
 
-        if ( resHdr.get( "Content-Type" )?.includes( "text/html" ) )
+        const contentReplacements = {
+            "text/css": /(url\()\/(?!\/)/g,
+            "text/html": /((action|href|src)=["'])\/(?!\/)/g
+        }
+        for ( const [ contentType, regex ] of Object.entries( contentReplacements ) )
         {
-            const body = ( await res.text() ).replace(
-                /((action|href|src)=["'])\/(?!\/)/g,
-                `$1${ urlObj.protocol }//${ urlObj.host }/${ new URL( targetUrl ).origin }/`
-            )
-            return new Response( body, { headers: resHdr, status: res.status } )
+            if ( resHdr.get( "Content-Type" )?.includes( contentType ) )
+            {
+                const body = ( await res.text() ).replace(
+                    regex,
+                    `$1${ urlObj.protocol }//${ urlObj.host }/${ new URL( targetUrl ).origin }/`
+                )
+                return new Response( body, { headers: resHdr, status: res.status } )
+            }
         }
 
         return new Response( res.body, { headers: resHdr, status: res.status } )
