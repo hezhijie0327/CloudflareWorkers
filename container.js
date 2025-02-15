@@ -1,4 +1,4 @@
-// Current Version: 1.0.9
+// Current Version: 1.1.0
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -41,21 +41,23 @@ async function fetchHandler ( e )
             return fetch( new Request( `https://${ authHostname }${ url.pathname }${ url.search }`, e.request ) )
         }
 
-        let res = await fetch( new Request( url, {
-            headers: {
-                'Host': url.hostname,
-                ...( e.request.headers.has( 'Authorization' ) && { Authorization: e.request.headers.get( 'Authorization' ) } )
-            }
-        } ), e.request )
+        let reqHdr = new Headers( e.request.headers )
+        const commonReqHeaders = {
+            'Host': url.hostname,
+            'x-amz-content-sha256': 'UNSIGNED-PAYLOAD'
+        }
+        Object.entries( commonReqHeaders ).forEach( ( [ key, value ] ) => reqHdr.set( key, value ) )
+
+        let res = await fetch( new Request( url, { headers: reqHdr } ), e.request )
 
         let resHdr = new Headers( res.headers )
-        const commonHeaders = {
+        const commonResHeaders = {
             'Access-Control-Allow-Headers': '*',
             'Access-Control-Allow-Methods': '*',
             'Access-Control-Allow-Origin': '*',
             'Cache-Control': 'no-store'
         }
-        Object.entries( commonHeaders ).forEach( ( [ key, value ] ) => resHdr.set( key, value ) )
+        Object.entries( commonResHeaders ).forEach( ( [ key, value ] ) => resHdr.set( key, value ) )
 
         if ( resHdr.has( 'Location' ) )
         {
