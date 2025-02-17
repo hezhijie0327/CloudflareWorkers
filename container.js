@@ -1,4 +1,4 @@
-// Current Version: 1.1.0
+// Current Version: 1.1.1
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -31,7 +31,9 @@ async function fetchHandler ( e )
 
         url.hostname = domainMapping[ subdomain ]
 
-        if ( url.hostname === domainMapping[ 'docker' ] && url.pathname === '/token' )
+        const isDockerHub = url.hostname === domainMapping[ 'docker' ]
+
+        if ( isDockerHub && url.pathname === '/token' )
         {
             const ip = e.request.headers.get( 'CF-Connecting-IP' ) || '127.0.0.1'
             const authHostname = /^(\d{1,3}\.){3}\d{1,3}$/.test( ip )
@@ -44,7 +46,6 @@ async function fetchHandler ( e )
         let reqHdr = new Headers( e.request.headers )
         const commonReqHeaders = {
             'Host': url.hostname,
-            'x-amz-content-sha256': 'UNSIGNED-PAYLOAD'
         }
         Object.entries( commonReqHeaders ).forEach( ( [ key, value ] ) => reqHdr.set( key, value ) )
 
@@ -62,10 +63,8 @@ async function fetchHandler ( e )
         if ( resHdr.has( 'Location' ) )
         {
             res = await fetch( new Request( resHdr.get( 'Location' ), {
-                body: e.request.body,
-                headers: e.request.headers,
-                method: e.request.method,
-                redirect: 'follow'
+                method: isDockerHub && res.status === 307 ? "GET" : undefined,
+                redirect: "follow"
             } ) )
 
             return new Response( res.body, { headers: res.headers, status: res.status } )
