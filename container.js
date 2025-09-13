@@ -1,4 +1,4 @@
-// Current Version: 1.1.1
+// Current Version: 1.1.2
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
 addEventListener( 'fetch', e => e.respondWith( fetchHandler( e ) ) )
@@ -35,12 +35,7 @@ async function fetchHandler ( e )
 
         if ( isDockerHub && url.pathname === '/token' )
         {
-            const ip = e.request.headers.get( 'CF-Connecting-IP' ) || '127.0.0.1'
-            const authHostname = /^(\d{1,3}\.){3}\d{1,3}$/.test( ip )
-                ? ( Math.random() < 0.5 ? 'auth.docker.com' : 'auth.docker.io' )
-                : 'auth.ipv6.docker.com'
-
-            return fetch( new Request( `https://${ authHostname }${ url.pathname }${ url.search }`, e.request ) )
+            return fetch( new Request( `https://auth.docker.io${ url.pathname }${ url.search }`, e.request ) )
         }
 
         let reqHdr = new Headers( e.request.headers )
