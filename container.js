@@ -1,6 +1,5 @@
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
-/** @type {{[key: string]: string}} */
 const PAT_MAPPING = {
   docker: "",
   ecr: "",
@@ -13,21 +12,16 @@ const PAT_MAPPING = {
   quay: "",
 };
 
-addEventListener(
-  "fetch",
-  /** @param {any} e */ function (e) {
-    return e.respondWith(fetchHandler(e));
-  },
-);
+addEventListener("fetch", function (e) {
+  return e.respondWith(fetchHandler(e));
+});
 
-/** @param {any} e */
 async function fetchHandler(e) {
   try {
     const url = new URL(e.request.url);
     const hostname = url.hostname;
     const subdomain = hostname.split(".")[0];
 
-    /** @type {{[key: string]: string}} */
     const domainMapping = {
       docker: "registry-1.docker.io",
       ecr: "public.ecr.aws",
@@ -50,11 +44,18 @@ async function fetchHandler(e) {
     const isDockerHub = url.hostname === domainMapping["docker"];
 
     if (isDockerHub && url.pathname === "/token") {
+      const tokenHeaders = new Headers(e.request.headers);
+      tokenHeaders.set("Host", "auth.docker.io");
+
       return fetch(
-        new Request(
-          `https://auth.docker.io${url.pathname}${url.search}`,
-          e.request,
-        ),
+        new Request(`https://auth.docker.io${url.pathname}${url.search}`, {
+          method: e.request.method,
+          headers: tokenHeaders,
+          body: ["GET", "HEAD"].includes(e.request.method)
+            ? null
+            : e.request.body,
+          redirect: "follow",
+        }),
       );
     }
 
@@ -71,7 +72,16 @@ async function fetchHandler(e) {
       reqHdr.set("Authorization", `Bearer ${registryPatToken}`);
     }
 
-    let res = await fetch(new Request(url, { headers: reqHdr }), e.request);
+    let res = await fetch(
+      new Request(url, {
+        method: e.request.method,
+        headers: reqHdr,
+        body: ["GET", "HEAD"].includes(e.request.method)
+          ? null
+          : e.request.body,
+      }),
+      { redirect: "follow" },
+    );
 
     let resHdr = new Headers(res.headers);
     const commonResHeaders = {
@@ -86,15 +96,21 @@ async function fetchHandler(e) {
 
     const location = resHdr.get("Location");
     if (location) {
+      const redirectUrl = new URL(location, url).toString();
       res = await fetch(
-        new Request(location, {
+        new Request(redirectUrl, {
           method: isDockerHub && res.status === 307 ? "GET" : undefined,
           redirect: "follow",
         }),
       );
 
+      const redirectHdr = new Headers(res.headers);
+      Object.entries(commonResHeaders).forEach(([key, value]) =>
+        redirectHdr.set(key, value),
+      );
+
       return new Response(res.body, {
-        headers: res.headers,
+        headers: redirectHdr,
         status: res.status,
       });
     }
@@ -103,7 +119,10 @@ async function fetchHandler(e) {
       const authRegex =
         url.hostname === "registry-1.docker.io"
           ? /https:\/\/auth\.(ipv6\.)?docker\.(io|com)/g
-          : `/https://${url.hostname}/g`;
+          : new RegExp(
+              `https://${url.hostname.replace(/[.*+?^${}()|[\\]\\]/g, "\\\\$&")}`,
+              "g",
+            );
       const authHeader = resHdr.get("WWW-Authenticate");
       if (authHeader !== null) {
         resHdr.set(
