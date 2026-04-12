@@ -31,24 +31,16 @@ async function fetchHandler(e) {
       return new Response("Unsupported domain", { status: 400 });
     }
 
-    const targetHost = domainMapping[subdomain];
-    url.hostname = targetHost;
+    url.hostname = domainMapping[subdomain];
 
     const isDockerHub = url.hostname === domainMapping["docker"];
 
     if (isDockerHub && url.pathname === "/token") {
-      const tokenHeaders = new Headers(e.request.headers);
-      tokenHeaders.set("Host", "auth.docker.io");
-
       return fetch(
-        new Request(`https://auth.docker.io${url.pathname}${url.search}`, {
-          method: e.request.method,
-          headers: tokenHeaders,
-          body: ["GET", "HEAD"].includes(e.request.method)
-            ? null
-            : e.request.body,
-          redirect: "follow",
-        }),
+        new Request(
+          `https://auth.docker.io${url.pathname}${url.search}`,
+          e.request,
+        ),
       );
     }
 
@@ -60,16 +52,7 @@ async function fetchHandler(e) {
       reqHdr.set(key, value),
     );
 
-    let res = await fetch(
-      new Request(url, {
-        method: e.request.method,
-        headers: reqHdr,
-        body: ["GET", "HEAD"].includes(e.request.method)
-          ? null
-          : e.request.body,
-      }),
-      { redirect: "follow" },
-    );
+    let res = await fetch(new Request(url, { headers: reqHdr }), e.request);
 
     let resHdr = new Headers(res.headers);
     const commonResHeaders = {
@@ -82,41 +65,37 @@ async function fetchHandler(e) {
       resHdr.set(key, value),
     );
 
-    const location = resHdr.get("Location");
-    if (location) {
-      const redirectUrl = new URL(location, url).toString();
-      res = await fetch(
-        new Request(redirectUrl, {
-          method: isDockerHub && res.status === 307 ? "GET" : undefined,
-          redirect: "follow",
-        }),
-      );
+    if (resHdr.has("Location")) {
+      const location = resHdr.get("Location");
+      if (location !== null) {
+        res = await fetch(
+          new Request(location, {
+            method: isDockerHub && res.status === 307 ? "GET" : undefined,
+            redirect: "follow",
+          }),
+        );
 
-      const redirectHdr = new Headers(res.headers);
-      Object.entries(commonResHeaders).forEach(([key, value]) =>
-        redirectHdr.set(key, value),
-      );
-
-      return new Response(res.body, {
-        headers: redirectHdr,
-        status: res.status,
-      });
+        return new Response(res.body, {
+          headers: res.headers,
+          status: res.status,
+        });
+      }
     }
 
     if (resHdr.has("WWW-Authenticate")) {
       const authRegex =
         url.hostname === "registry-1.docker.io"
           ? /https:\/\/auth\.(ipv6\.)?docker\.(io|com)/g
-          : new RegExp(
-              `https://${url.hostname.replace(/[.*+?^${}()|[\\]\\]/g, "\\\\$&")}`,
-              "g",
-            );
+          : new RegExp(`https://${url.hostname}`, "g");
+
       const authHeader = resHdr.get("WWW-Authenticate");
       if (authHeader !== null) {
-        const requestHost = e.request.headers.get("Host") || url.host;
         resHdr.set(
           "WWW-Authenticate",
-          authHeader.replace(authRegex, `https://${requestHost}`),
+          authHeader.replace(
+            authRegex,
+            `https://${e.request.url.split("/")[2]}`,
+          ),
         );
       }
     }
