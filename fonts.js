@@ -1,18 +1,27 @@
 // Description: Using Cloudflare Workers to speed up fonts.googleapis.com and fonts.gstatic.com's visiting.
 
-addEventListener("fetch", (event) => {
-  event.respondWith(handleRequest(event.request));
-});
+/** @param {any} event */
+addEventListener(
+  "fetch",
+  /** @param {any} event */ (event) => {
+    event.respondWith(handleRequest(event.request));
+  },
+);
 
+/** @param {Request} request */
 async function handleRequest(request) {
-  let url = request.url.substr(8);
-  let path = url.split("/")[0];
-  url = url.substr(url.indexOf("/") + 1);
+  const requestUrl = new URL(request.url);
+  const host = requestUrl.host;
+  const pathname = requestUrl.pathname;
+  const path = `${pathname}${requestUrl.search}`;
 
-  const response_css = await fetch("https://fonts.googleapis.com/" + url);
-  const response_font = await fetch("https://fonts.gstatic.com/" + url);
+  const response_css = await fetch(`https://fonts.googleapis.com${path}`);
+  const response_font = await fetch(`https://fonts.gstatic.com${path}`);
 
-  if (!url || (response_css.status !== 200 && response_font.status !== 200)) {
+  if (
+    pathname === "/" ||
+    (response_css.status !== 200 && response_font.status !== 200)
+  ) {
     return new Response("404 Not Found", {
       status: 404,
       headers: {
@@ -24,7 +33,11 @@ async function handleRequest(request) {
 
   if (response_css.status === 200) {
     let css = await response_css.text();
-    css = css.replace(/fonts\.gstatic\.com/gim, path);
+    const proxyPrefix = `https://${host}/https://fonts.gstatic.com`;
+    css = css
+      .replace(/https?:\/\/fonts\.gstatic\.com/gim, proxyPrefix)
+      .replace(/\/\/fonts\.gstatic\.com/gim, proxyPrefix);
+
     return new Response(css, {
       status: 200,
       headers: {
@@ -34,6 +47,7 @@ async function handleRequest(request) {
     });
   }
 
+  /** @type {{ [key: string]: string }} */
   const fontExtMap = {
     ".collection": "font/collection;charset=UTF-8",
     ".eot": "application/vnd.ms-fontobject;charset=UTF-8",
@@ -46,19 +60,23 @@ async function handleRequest(request) {
   };
 
   for (const ext in fontExtMap) {
-    if (url.match(new RegExp(`${ext}$`))) {
+    if (pathname.match(new RegExp(`${ext}$`))) {
+      const headers = new Headers(response_font.headers);
+      headers.set("Access-Control-Allow-Origin", "*");
+      if (!headers.has("content-type")) {
+        headers.set("content-type", fontExtMap[ext]);
+      }
       return new Response(response_font.body, {
-        status: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "content-type": fontExtMap[ext],
-        },
+        status: response_font.status,
+        headers,
       });
     }
   }
 
+  const headers = new Headers(response_font.headers);
+  headers.set("Access-Control-Allow-Origin", "*");
   return new Response(response_font.body, {
-    status: 200,
-    headers: response_font.headers,
+    status: response_font.status,
+    headers,
   });
 }

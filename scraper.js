@@ -1,31 +1,58 @@
 // Description: Using Cloudflare Workers for web scraping.
 
-addEventListener("fetch", (event) => {
-  event.respondWith(handleRequest(event.request));
-});
+/** @param {any} event */
+addEventListener(
+  "fetch",
+  /** @param {any} event */ (event) => {
+    event.respondWith(handleRequest(event.request));
+  },
+);
 
+/** @param {Request} request */
 async function handleRequest(request) {
   const { searchParams } = new URL(request.url);
 
   let url = searchParams.get("url");
   const selectors = searchParams
-    .get("selector")
-    ?.split(",")
-    .map((s) => s.trim());
-  if (!url || !selectors || selectors.length === 0) {
+    .getAll("selector")
+    .flatMap((value) => value.split(","))
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!url || selectors.length === 0) {
     return new Response(
       JSON.stringify({ error: "Missing url or selector parameters" }),
-      { status: 400 },
+      {
+        status: 400,
+        headers: { "content-type": "application/json;charset=UTF-8" },
+      },
     );
   }
 
   try {
     const response = await fetch(url);
+    if (!response.ok) {
+      return new Response(
+        JSON.stringify(
+          { error: "Failed to fetch target URL", status: response.status },
+          null,
+          2,
+        ),
+        {
+          status: response.status,
+          headers: {
+            "content-type": "application/json;charset=UTF-8",
+            "Access-Control-Allow-Origin": "*",
+          },
+        },
+      );
+    }
 
-    const rewriter = new HTMLRewriter();
-    const matches = {};
-    const currentTexts = Object.fromEntries(
-      selectors.map((selector) => [selector, ""]),
+    const globalAny = /** @type {any} */ (globalThis);
+    const HTMLRewriterClass = /** @type {any} */ (globalAny.HTMLRewriter);
+    const rewriter = new HTMLRewriterClass();
+    const matches = /** @type {{ [selector: string]: string[] }} */ ({});
+    const currentTexts = /** @type {{ [selector: string]: string }} */ (
+      Object.fromEntries(selectors.map((selector) => [selector, ""]))
     );
 
     selectors.forEach((selector) => {
@@ -37,7 +64,7 @@ async function handleRequest(request) {
             currentTexts[selector] = "";
           }
         },
-        text(text) {
+        text: /** @param {any} text */ function (text) {
           currentTexts[selector] += text.text;
           if (text.lastInTextNode)
             currentTexts[selector] = currentTexts[selector].replace(
@@ -67,7 +94,8 @@ async function handleRequest(request) {
       },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }, null, 2), {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: message }, null, 2), {
       status: 500,
       headers: { "content-type": "application/json;charset=UTF-8" },
     });

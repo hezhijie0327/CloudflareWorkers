@@ -1,28 +1,21 @@
 // Description: Using Cloudflare Workers to speed up container repo visiting.
 
-const PAT_MAPPING = {
-  docker: "",
-  ecr: "",
-  elastic: "",
-  gcr: "",
-  ghcr: "",
-  k8s: "",
-  mcr: "",
-  nvcr: "",
-  quay: "",
-};
+/** @param {any} e */
+addEventListener(
+  "fetch",
+  /** @param {any} e */ (e) => {
+    return e.respondWith(fetchHandler(e));
+  },
+);
 
-addEventListener("fetch", function (e) {
-  return e.respondWith(fetchHandler(e));
-});
-
+/** @param {any} e */
 async function fetchHandler(e) {
   try {
     const url = new URL(e.request.url);
     const hostname = url.hostname;
     const subdomain = hostname.split(".")[0];
 
-    const domainMapping = {
+    const domainMapping = /** @type {{ [key: string]: string }} */ ({
       docker: "registry-1.docker.io",
       ecr: "public.ecr.aws",
       elastic: "docker.elastic.co",
@@ -32,7 +25,7 @@ async function fetchHandler(e) {
       mcr: "mcr.microsoft.com",
       nvcr: "nvcr.io",
       quay: "quay.io",
-    };
+    });
 
     if (!(subdomain in domainMapping)) {
       return new Response("Unsupported domain", { status: 400 });
@@ -66,11 +59,6 @@ async function fetchHandler(e) {
     Object.entries(commonReqHeaders).forEach(([key, value]) =>
       reqHdr.set(key, value),
     );
-
-    const registryPatToken = String(PAT_MAPPING[subdomain] || "").trim();
-    if (registryPatToken) {
-      reqHdr.set("Authorization", `Bearer ${registryPatToken}`);
-    }
 
     let res = await fetch(
       new Request(url, {
@@ -125,12 +113,10 @@ async function fetchHandler(e) {
             );
       const authHeader = resHdr.get("WWW-Authenticate");
       if (authHeader !== null) {
+        const requestHost = e.request.headers.get("Host") || url.host;
         resHdr.set(
           "WWW-Authenticate",
-          authHeader.replace(
-            authRegex,
-            `https://${e.request.url.split("/")[2]}`,
-          ),
+          authHeader.replace(authRegex, `https://${requestHost}`),
         );
       }
     }

@@ -1,9 +1,13 @@
 // Description: Using Cloudflare Workers to update your DNS record.
 
-addEventListener("fetch", (event) => {
-  event.respondWith(handleRequest(event.request));
-});
+addEventListener(
+  "fetch",
+  /** @param {any} event */ (event) => {
+    event.respondWith(handleRequest(event.request));
+  },
+);
 
+/** @param {Request} request */
 async function handleRequest(request) {
   const headers = request.headers;
 
@@ -20,130 +24,187 @@ async function handleRequest(request) {
   const recordType = (params.get("record_type") || "A").toUpperCase();
   const recordValue =
     params.get("record_value") || headers.get("CF-Connecting-IP") || null;
-  const zoneName = recordName
-    ? recordName.split(".").slice(-2).join(".")
-    : null;
+  const explicitZoneName = params.get("zone_name") || null;
+  const zoneName = explicitZoneName
+    ? explicitZoneName.trim()
+    : recordName
+      ? recordName.split(".").slice(-2).join(".")
+      : null;
 
-  let debug = {
-    auth: { xAuthEmail, xAuthKey },
-    request: {
-      operation,
-      recordName,
-      recordProxy,
-      recordTTL,
-      recordType,
-      recordValue,
-      zoneName,
-    },
-    result: {
-      accountName: null,
-      zoneID: null,
-      recordID: null,
-    },
+  const jsonHeaders = {
+    "Content-Type": "application/json;charset=UTF-8",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "*",
   };
+
+  const debug =
+    /** @type {{ auth: { xAuthEmail: string|null; xAuthKey: string|null }; request: { operation: string; recordName: string|null; recordProxy: boolean; recordTTL: number; recordType: string; recordValue: string|null; zoneName: string|null }; result: { accountName: string|null; zoneID: string|null; recordID: string|null } }} */ ({
+      auth: { xAuthEmail, xAuthKey },
+      request: {
+        operation,
+        recordName,
+        recordProxy,
+        recordTTL,
+        recordType,
+        recordValue,
+        zoneName,
+      },
+      result: {
+        accountName: null,
+        zoneID: null,
+        recordID: null,
+      },
+    });
 
   let success = false;
 
   if (!xAuthEmail || !xAuthKey) {
-    return new Response(JSON.stringify({ debug, success }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        debug,
+        error: "Missing X-Auth-Email or X-Auth-Key",
+        success,
+      }),
+      { status: 400, headers: jsonHeaders },
+    );
   }
 
-  debug.result.accountName = await getAccountName(xAuthEmail, xAuthKey);
+  if (!recordName || !recordType || !zoneName) {
+    return new Response(
+      JSON.stringify({
+        debug,
+        error:
+          "Missing required record_name, record_type, or zone_name parameters",
+        success,
+      }),
+      { status: 400, headers: jsonHeaders },
+    );
+  }
+
+  if ((operation === "CREATE" || operation === "UPDATE") && !recordValue) {
+    return new Response(
+      JSON.stringify({ debug, error: "Missing record_value", success }),
+      { status: 400, headers: jsonHeaders },
+    );
+  }
+
+  const authEmail = /** @type {string} */ (xAuthEmail);
+  const authKey = /** @type {string} */ (xAuthKey);
+  const validRecordName = /** @type {string} */ (recordName);
+  const validRecordType = /** @type {string} */ (recordType);
+  const validZoneName = /** @type {string} */ (zoneName);
+  const validRecordValue = recordValue
+    ? /** @type {string} */ (recordValue)
+    : "";
+
+  debug.result.accountName = await getAccountName(authEmail, authKey);
   if (!debug.result.accountName) {
     return new Response(JSON.stringify({ debug, success }), {
       status: 401,
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
 
-  debug.result.zoneID = await getZoneID(xAuthEmail, xAuthKey, zoneName);
+  debug.result.zoneID = await getZoneID(authEmail, authKey, validZoneName);
   if (!debug.result.zoneID) {
     return new Response(JSON.stringify({ debug, success }), {
       status: 404,
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
 
   switch (operation) {
     case "CREATE":
       success = await ddnsCreateRecord(
-        xAuthEmail,
-        xAuthKey,
+        authEmail,
+        authKey,
         debug.result.zoneID,
-        recordName,
-        recordType,
-        recordValue,
+        validRecordName,
+        validRecordType,
+        validRecordValue,
         recordTTL,
         recordProxy,
       );
       return new Response(JSON.stringify({ debug }), {
         status: success ? 200 : 500,
+        headers: jsonHeaders,
       });
 
     case "UPDATE":
       debug.result.recordID = await getRecordID(
-        xAuthEmail,
-        xAuthKey,
+        authEmail,
+        authKey,
         debug.result.zoneID,
-        recordName,
-        recordType,
+        validRecordName,
+        validRecordType,
       );
       if (!debug.result.recordID) {
         return new Response(JSON.stringify({ debug, success }), {
           status: 404,
-          headers: { "Content-Type": "application/json" },
+          headers: jsonHeaders,
         });
       }
       success = await ddnsUpdateRecord(
-        xAuthEmail,
-        xAuthKey,
+        authEmail,
+        authKey,
         debug.result.zoneID,
         debug.result.recordID,
-        recordName,
-        recordType,
-        recordValue,
+        validRecordName,
+        validRecordType,
+        validRecordValue,
         recordTTL,
         recordProxy,
       );
       return new Response(JSON.stringify({ debug }), {
         status: success ? 200 : 500,
+        headers: jsonHeaders,
       });
 
     case "DELETE":
       debug.result.recordID = await getRecordID(
-        xAuthEmail,
-        xAuthKey,
+        authEmail,
+        authKey,
         debug.result.zoneID,
-        recordName,
-        recordType,
+        validRecordName,
+        validRecordType,
       );
       if (!debug.result.recordID) {
         return new Response(JSON.stringify({ debug, success }), {
           status: 404,
-          headers: { "Content-Type": "application/json" },
+          headers: jsonHeaders,
         });
       }
       success = await ddnsDeleteRecord(
-        xAuthEmail,
-        xAuthKey,
+        authEmail,
+        authKey,
         debug.result.zoneID,
         debug.result.recordID,
       );
       return new Response(JSON.stringify({ debug }), {
         status: success ? 200 : 500,
+        headers: jsonHeaders,
       });
 
     default:
       return new Response(JSON.stringify({ debug, success }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: jsonHeaders,
       });
   }
 }
 
+/**
+ * @param {string|null} XAuthEmail
+ * @param {string|null} XAuthKey
+ * @param {string|null} ZoneID
+ * @param {string|null} RecordName
+ * @param {string|null} RecordType
+ * @param {string|null} RecordValue
+ * @param {number} RecordTTL
+ * @param {boolean} RecordProxy
+ * @returns {Promise<boolean>}
+ */
 async function ddnsCreateRecord(
   XAuthEmail,
   XAuthKey,
@@ -164,11 +225,13 @@ async function ddnsCreateRecord(
   };
 
   try {
+    const authEmail = /** @type {string} */ (XAuthEmail);
+    const authKey = /** @type {string} */ (XAuthKey);
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        "X-Auth-Email": XAuthEmail,
-        "X-Auth-Key": XAuthKey,
+        "X-Auth-Email": authEmail,
+        "X-Auth-Key": authKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestData),
@@ -181,6 +244,18 @@ async function ddnsCreateRecord(
   }
 }
 
+/**
+ * @param {string|null} XAuthEmail
+ * @param {string|null} XAuthKey
+ * @param {string|null} ZoneID
+ * @param {string|null} RecordID
+ * @param {string|null} RecordName
+ * @param {string|null} RecordType
+ * @param {string|null} RecordValue
+ * @param {number} RecordTTL
+ * @param {boolean} RecordProxy
+ * @returns {Promise<boolean>}
+ */
 async function ddnsUpdateRecord(
   XAuthEmail,
   XAuthKey,
@@ -202,11 +277,13 @@ async function ddnsUpdateRecord(
   };
 
   try {
+    const authEmail = /** @type {string} */ (XAuthEmail);
+    const authKey = /** @type {string} */ (XAuthKey);
     const response = await fetch(url, {
       method: "PUT",
       headers: {
-        "X-Auth-Email": XAuthEmail,
-        "X-Auth-Key": XAuthKey,
+        "X-Auth-Email": authEmail,
+        "X-Auth-Key": authKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestData),
@@ -219,15 +296,24 @@ async function ddnsUpdateRecord(
   }
 }
 
+/**
+ * @param {string|null} XAuthEmail
+ * @param {string|null} XAuthKey
+ * @param {string|null} ZoneID
+ * @param {string|null} RecordID
+ * @returns {Promise<boolean>}
+ */
 async function ddnsDeleteRecord(XAuthEmail, XAuthKey, ZoneID, RecordID) {
   const url = `https://api.cloudflare.com/client/v4/zones/${ZoneID}/dns_records/${RecordID}`;
 
   try {
+    const authEmail = /** @type {string} */ (XAuthEmail);
+    const authKey = /** @type {string} */ (XAuthKey);
     const response = await fetch(url, {
       method: "DELETE",
       headers: {
-        "X-Auth-Email": XAuthEmail,
-        "X-Auth-Key": XAuthKey,
+        "X-Auth-Email": authEmail,
+        "X-Auth-Key": authKey,
         "Content-Type": "application/json",
       },
     });
@@ -239,6 +325,14 @@ async function ddnsDeleteRecord(XAuthEmail, XAuthKey, ZoneID, RecordID) {
   }
 }
 
+/**
+ * @param {string|null} XAuthEmail
+ * @param {string|null} XAuthKey
+ * @param {string|null} ZoneID
+ * @param {string|null} RecordName
+ * @param {string|null} RecordType
+ * @returns {Promise<string|null>}
+ */
 async function getRecordID(
   XAuthEmail,
   XAuthKey,
@@ -246,20 +340,26 @@ async function getRecordID(
   RecordName,
   RecordType,
 ) {
-  const url = `https://api.cloudflare.com/client/v4/zones/${ZoneID}/dns_records?name=${RecordName}`;
+  const url = `https://api.cloudflare.com/client/v4/zones/${ZoneID}/dns_records?name=${encodeURIComponent(
+    /** @type {string} */ (RecordName),
+  )}`;
 
   try {
+    const authEmail = /** @type {string} */ (XAuthEmail);
+    const authKey = /** @type {string} */ (XAuthKey);
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "X-Auth-Email": XAuthEmail,
-        "X-Auth-Key": XAuthKey,
+        "X-Auth-Email": authEmail,
+        "X-Auth-Key": authKey,
         "Content-Type": "application/json",
       },
     });
     const data = await response.json();
     if (data.success && data.result.length > 0) {
-      const record = data.result.find((record) => record.type === RecordType);
+      const record = data.result.find(
+        /** @param {any} record */ (record) => record.type === RecordType,
+      );
       return record ? record.id : null;
     }
     return null;
@@ -269,15 +369,25 @@ async function getRecordID(
   }
 }
 
+/**
+ * @param {string|null} XAuthEmail
+ * @param {string|null} XAuthKey
+ * @param {string|null} ZoneName
+ * @returns {Promise<string|null>}
+ */
 async function getZoneID(XAuthEmail, XAuthKey, ZoneName) {
-  const url = `https://api.cloudflare.com/client/v4/zones?name=${ZoneName}`;
+  const url = `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(
+    /** @type {string} */ (ZoneName),
+  )}`;
 
   try {
+    const authEmail = /** @type {string} */ (XAuthEmail);
+    const authKey = /** @type {string} */ (XAuthKey);
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "X-Auth-Email": XAuthEmail,
-        "X-Auth-Key": XAuthKey,
+        "X-Auth-Email": authEmail,
+        "X-Auth-Key": authKey,
         "Content-Type": "application/json",
       },
     });
@@ -289,6 +399,11 @@ async function getZoneID(XAuthEmail, XAuthKey, ZoneName) {
   }
 }
 
+/**
+ * @param {string} XAuthEmail
+ * @param {string} XAuthKey
+ * @returns {Promise<string|null>}
+ */
 async function getAccountName(XAuthEmail, XAuthKey) {
   const url =
     "https://api.cloudflare.com/client/v4/accounts?page=1&per_page=5&direction=desc";
