@@ -381,6 +381,16 @@ function decodeBody(buf, charset) {
 // HTML rewriting
 // ---------------------------------------------------------------------------
 
+// Per HTML semantics, `&amp;` inside an attribute value IS `&`. Some runtime
+// builds return the raw (still entity-encoded) attribute text from
+// getAttribute instead of the decoded value; decoding here makes both behave
+// identically - otherwise the entity's semicolon later gets percent-encoded
+// (`&amp;` -> `&amp%3B`) and the upstream receives broken query parameters.
+/** @param {string} value */
+function decodeAttributeValue(value) {
+    return value.replace(/&amp;/gi, "&");
+}
+
 class AttrRewriter {
     constructor(ctx) {
         this.ctx = ctx;
@@ -395,10 +405,11 @@ class AttrRewriter {
             }
         }
         for (const name of REWRITE_ATTRS) {
-            const value = el.getAttribute(name);
-            if (value == null || value === "") {
+            const raw = el.getAttribute(name);
+            if (raw == null || raw === "") {
                 continue;
             }
+            const value = decodeAttributeValue(raw);
             let next;
             if (name === "srcset") {
                 next = rewriteSrcset(value, this.ctx);
@@ -427,7 +438,7 @@ class MetaRefreshRewriter {
         if (!content) {
             return;
         }
-        const m = /^\s*(.*?;\s*url\s*=\s*)([\s\S]+)$/i.exec(content);
+        const m = /^\s*(.*?;\s*url\s*=\s*)([\s\S]+)$/i.exec(decodeAttributeValue(content));
         if (!m) {
             return;
         }
