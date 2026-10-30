@@ -6,12 +6,7 @@ This guide contains important information for agents working with this Cloudflar
 
 This repository contains Cloudflare Workers scripts for various purposes:
 - container.js: Container registry proxy for Docker, GCR, etc.
-- ddns.js: Dynamic DNS management for Cloudflare
-- fonts.js: Google Fonts proxy
 - proxy.js: General reverse proxy
-- scraper.js: Web scraping utility
-
-Superseded scripts live in `archive/` and are excluded from linting.
 
 ## Development Commands
 
