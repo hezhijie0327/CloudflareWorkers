@@ -28,10 +28,7 @@ wrangler auth login
 wrangler deploy container.js
 
 # 部署其他脚本
-wrangler deploy ddns.js
-wrangler deploy fonts.js
 wrangler deploy proxy.js
-wrangler deploy scraper.js
 ```
 
 ## 注意事项

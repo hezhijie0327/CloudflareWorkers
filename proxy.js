@@ -13,37 +13,37 @@
 
 // Hop-by-hop and worker-owned request headers that must not reach the upstream.
 const REQUEST_SKIP_HEADERS = new Set([
-  "connection",
-  "keep-alive",
-  "proxy-authenticate",
-  "proxy-authorization",
-  "te",
-  "trailer",
-  "transfer-encoding",
-  "upgrade",
-  "expect",
-  "cookie",
-  "host",
-  "content-length",
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    "expect",
+    "cookie",
+    "host",
+    "content-length",
 ]);
 
 // Security and encoding headers that would break or re-compress the rewritten response.
 const RESPONSE_DROP_HEADERS = [
-  "Content-Encoding",
-  "Content-Length",
-  "Content-Security-Policy",
-  "Content-Security-Policy-Report-Only",
-  "X-Frame-Options",
-  "Cross-Origin-Opener-Policy",
-  "Cross-Origin-Embedder-Policy",
-  "Cross-Origin-Resource-Policy",
+    "Content-Encoding",
+    "Content-Length",
+    "Content-Security-Policy",
+    "Content-Security-Policy-Report-Only",
+    "X-Frame-Options",
+    "Cross-Origin-Opener-Policy",
+    "Cross-Origin-Embedder-Policy",
+    "Cross-Origin-Resource-Policy",
 ];
 
 const RESPONSE_SET_HEADERS = {
-  "Access-Control-Allow-Headers": "*",
-  "Access-Control-Allow-Methods": "*",
-  "Access-Control-Allow-Origin": "*",
-  "Cache-Control": "no-store",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "*",
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "no-store",
 };
 
 // Git smart-HTTP endpoints are passed through byte-for-byte, never rewritten.
@@ -53,119 +53,113 @@ const GIT_PATH_PATTERN = /\/(info\/refs|git-upload-pack|git-receive-pack)$/;
 const REWRITE_ATTRS = ["href", "src", "srcset", "action", "data", "poster", "style"];
 
 const REWRITE_ELEMENTS =
-  "a, area, base, form, img, script, iframe, audio, video, source, embed, track, input, object, link";
+    "a, area, base, form, img, script, iframe, audio, video, source, embed, track, input, object, link";
 
 // ---------------------------------------------------------------------------
 // Entry point and request pipeline
 // ---------------------------------------------------------------------------
 
 /** @param {any} e */
-addEventListener(
-  "fetch",
-  /** @param {any} e */ (e) => e.respondWith(fetchHandler(e)),
-);
+addEventListener("fetch", /** @param {any} e */ (e) => e.respondWith(fetchHandler(e)));
 
 /** @param {any} e */
 async function fetchHandler(e) {
-  try {
-    const req = e.request;
-    const urlObj = new URL(req.url);
+    try {
+        const req = e.request;
+        const urlObj = new URL(req.url);
 
-    if (urlObj.pathname === "/" && !urlObj.search) {
-      return usagePage(urlObj.origin);
+        if (urlObj.pathname === "/" && !urlObj.search) {
+            return usagePage(urlObj.origin);
+        }
+
+        const targetUrl = extractTarget(urlObj, req);
+        if (!targetUrl) {
+            return jsonError(`Missing or invalid target URL. Usage: ${urlObj.origin}/https://example.com/`, 400);
+        }
+
+        if ((req.headers.get("upgrade") || "").toLowerCase() === "websocket") {
+            return await proxyWebSocket(req, targetUrl);
+        }
+
+        return await proxyHttp(req, targetUrl, urlObj);
+    } catch (error) {
+        return jsonError(error instanceof Error ? error.message : String(error), 500);
     }
-
-    const targetUrl = extractTarget(urlObj, req);
-    if (!targetUrl) {
-      return jsonError(
-        "Missing or invalid target URL. Usage: " + urlObj.origin + "/https://example.com/",
-        400,
-      );
-    }
-
-    if ((req.headers.get("upgrade") || "").toLowerCase() === "websocket") {
-      return await proxyWebSocket(req, targetUrl);
-    }
-
-    return await proxyHttp(req, targetUrl, urlObj);
-  } catch (error) {
-    return jsonError(error instanceof Error ? error.message : String(error), 500);
-  }
 }
 
 async function proxyHttp(req, targetUrl, urlObj) {
-  const git = isGitTarget(targetUrl, req);
-  const res = await fetch(targetUrl, {
-    body: req.body,
-    headers: filterRequestHeaders(req, targetUrl, urlObj),
-    method: req.method,
-    redirect: "manual",
-  });
+    const git = isGitTarget(targetUrl, req);
+    const res = await fetch(targetUrl, {
+        body: req.body,
+        headers: filterRequestHeaders(req, targetUrl, urlObj),
+        method: req.method,
+        redirect: "manual",
+    });
 
-  const headers = buildResponseHeaders(res, targetUrl, urlObj, { git });
-  // 204/304 have no body to re-wrap; git payloads must stay byte-for-byte.
-  if (!res.body || res.status === 204 || res.status === 304 || git) {
+    const headers = buildResponseHeaders(res, targetUrl, urlObj, { git });
+    // 204/304 have no body to re-wrap; git payloads must stay byte-for-byte.
+    if (!res.body || res.status === 204 || res.status === 304 || git) {
+        return streamResponse(res, headers);
+    }
+
+    const contentType = (res.headers.get("Content-Type") || "").toLowerCase();
+    if (contentType.includes("text/html")) {
+        return serveHtml(res, targetUrl, urlObj);
+    }
+    if (contentType.includes("text/css")) {
+        return serveCss(res, targetUrl, urlObj);
+    }
     return streamResponse(res, headers);
-  }
-
-  const contentType = (res.headers.get("Content-Type") || "").toLowerCase();
-  if (contentType.includes("text/html")) {
-    return serveHtml(res, targetUrl, urlObj);
-  }
-  if (contentType.includes("text/css")) {
-    return serveCss(res, targetUrl, urlObj);
-  }
-  return streamResponse(res, headers);
 }
 
 function extractTarget(urlObj, req) {
-  const raw = urlObj.href
-    .slice(urlObj.origin.length + 1)
-    .replace(/^(https?):\/+/i, "$1://")
-    .replace(/^(wss?):\/+/i, "$1://")
-    .replace(/^\/\//, "https://");
+    const raw = urlObj.href
+        .slice(urlObj.origin.length + 1)
+        .replace(/^(https?):\/+/i, "$1://")
+        .replace(/^(wss?):\/+/i, "$1://")
+        .replace(/^\/\//, "https://");
 
-  if (/^(https?|wss?):\/\//i.test(raw)) {
-    try {
-      return /^wss/i.test(raw) ? raw : new URL(raw).href;
-    } catch {
-      return null;
+    if (/^(https?|wss?):\/\//i.test(raw)) {
+        try {
+            return /^wss/i.test(raw) ? raw : new URL(raw).href;
+        } catch {
+            return null;
+        }
     }
-  }
-  return resolveViaReferer(urlObj, req);
+    return resolveViaReferer(urlObj, req);
 }
 
 // JS-driven navigations can land on a bare worker path; resolve them against
 // the target embedded in the referer of the proxied page.
 function resolveViaReferer(urlObj, req) {
-  const referer = req.headers.get("referer");
-  if (!referer) {
-    return null;
-  }
-  try {
-    const ref = new URL(referer);
-    if (ref.origin !== urlObj.origin) {
-      return null;
+    const referer = req.headers.get("referer");
+    if (!referer) {
+        return null;
     }
-    const refTarget = ref.href.slice(ref.origin.length + 1);
-    if (!/^https?:\/\//i.test(refTarget)) {
-      return null;
+    try {
+        const ref = new URL(referer);
+        if (ref.origin !== urlObj.origin) {
+            return null;
+        }
+        const refTarget = ref.href.slice(ref.origin.length + 1);
+        if (!/^https?:\/\//i.test(refTarget)) {
+            return null;
+        }
+        return new URL(urlObj.pathname + urlObj.search, refTarget).href;
+    } catch {
+        return null;
     }
-    return new URL(urlObj.pathname + urlObj.search, refTarget).href;
-  } catch {
-    return null;
-  }
 }
 
 function isGitTarget(targetUrl, req) {
-  if (req.headers.get("git-protocol")) {
-    return true;
-  }
-  try {
-    return GIT_PATH_PATTERN.test(new URL(targetUrl).pathname);
-  } catch {
-    return false;
-  }
+    if (req.headers.get("git-protocol")) {
+        return true;
+    }
+    try {
+        return GIT_PATH_PATTERN.test(new URL(targetUrl).pathname);
+    } catch {
+        return false;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -173,60 +167,57 @@ function isGitTarget(targetUrl, req) {
 // ---------------------------------------------------------------------------
 
 function filterRequestHeaders(req, targetUrl, urlObj) {
-  const out = new Headers();
-  req.headers.forEach((value, key) => {
-    const lowerKey = key.toLowerCase();
-    if (!lowerKey.startsWith("cf-") && !REQUEST_SKIP_HEADERS.has(lowerKey)) {
-      out.set(key, value);
+    const out = new Headers();
+    req.headers.forEach((value, key) => {
+        const lowerKey = key.toLowerCase();
+        if (!lowerKey.startsWith("cf-") && !REQUEST_SKIP_HEADERS.has(lowerKey)) {
+            out.set(key, value);
+        }
+    });
+
+    retargetSelfReferences(out, urlObj.origin, new URL(targetUrl).origin);
+
+    const cookie = translateRequestCookie(req.headers.get("cookie"), hostTag(new URL(targetUrl).host));
+    if (cookie) {
+        out.set("cookie", cookie);
     }
-  });
-
-  retargetSelfReferences(out, urlObj.origin, new URL(targetUrl).origin);
-
-  const cookie = translateRequestCookie(
-    req.headers.get("cookie"),
-    hostTag(new URL(targetUrl).host),
-  );
-  if (cookie) {
-    out.set("cookie", cookie);
-  }
-  return out;
+    return out;
 }
 
 // The browser saw the worker origin; the upstream expects its own.
 function retargetSelfReferences(headers, workerOrigin, targetOrigin) {
-  const referer = headers.get("referer");
-  if (referer && referer.startsWith(workerOrigin + "/")) {
-    const inner = referer.slice(workerOrigin.length + 1);
-    if (/^https?:\/\//i.test(inner)) {
-      headers.set("referer", inner);
-    } else {
-      headers.delete("referer");
+    const referer = headers.get("referer");
+    if (referer?.startsWith(`${workerOrigin}/`)) {
+        const inner = referer.slice(workerOrigin.length + 1);
+        if (/^https?:\/\//i.test(inner)) {
+            headers.set("referer", inner);
+        } else {
+            headers.delete("referer");
+        }
     }
-  }
-  if (headers.get("origin") === workerOrigin) {
-    headers.set("origin", targetOrigin);
-  }
+    if (headers.get("origin") === workerOrigin) {
+        headers.set("origin", targetOrigin);
+    }
 }
 
 // Un-prefix the namespaced cookies of the current target host; cookies of other
 // target sites and worker-managed cookies never reach the upstream.
 function translateRequestCookie(header, tag) {
-  if (!header) {
-    return null;
-  }
-  const keep = [];
-  header.split(";").forEach((pair) => {
-    const eq = pair.indexOf("=");
-    if (eq < 1) {
-      return;
+    if (!header) {
+        return null;
     }
-    const name = pair.slice(0, eq).trim();
-    if (name.startsWith(tag)) {
-      keep.push(name.slice(tag.length) + "=" + pair.slice(eq + 1).trim());
-    }
-  });
-  return keep.length ? keep.join("; ") : null;
+    const keep = [];
+    header.split(";").forEach((pair) => {
+        const eq = pair.indexOf("=");
+        if (eq < 1) {
+            return;
+        }
+        const name = pair.slice(0, eq).trim();
+        if (name.startsWith(tag)) {
+            keep.push(`${name.slice(tag.length)}=${pair.slice(eq + 1).trim()}`);
+        }
+    });
+    return keep.length ? keep.join("; ") : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -234,71 +225,77 @@ function translateRequestCookie(header, tag) {
 // ---------------------------------------------------------------------------
 
 function buildResponseHeaders(res, targetUrl, urlObj, opts) {
-  const out = new Headers(res.headers);
-  RESPONSE_DROP_HEADERS.forEach((name) => out.delete(name));
-  if (!opts.git) {
-    Object.entries(RESPONSE_SET_HEADERS).forEach(([key, value]) => out.set(key, value));
-  }
-  rewriteLocationHeader(out, targetUrl, urlObj.origin);
-  if (!opts.git) {
-    rewriteSetCookieHeaders(out, targetUrl);
-  }
-  return out;
+    const out = new Headers(res.headers);
+    RESPONSE_DROP_HEADERS.forEach((name) => {
+        out.delete(name);
+    });
+    if (!opts.git) {
+        Object.entries(RESPONSE_SET_HEADERS).forEach(([key, value]) => {
+            out.set(key, value);
+        });
+    }
+    rewriteLocationHeader(out, targetUrl, urlObj.origin);
+    if (!opts.git) {
+        rewriteSetCookieHeaders(out, targetUrl);
+    }
+    return out;
 }
 
 function rewriteLocationHeader(headers, targetUrl, workerOrigin) {
-  const location = headers.get("Location");
-  if (!location) {
-    return;
-  }
-  try {
-    const abs = new URL(location, targetUrl);
-    if (/^(https?|wss?):/i.test(abs.protocol)) {
-      headers.set("Location", workerOrigin + "/" + abs.href);
+    const location = headers.get("Location");
+    if (!location) {
+        return;
     }
-  } catch {
-    // keep the original Location when it cannot be parsed
-  }
+    try {
+        const abs = new URL(location, targetUrl);
+        if (/^(https?|wss?):/i.test(abs.protocol)) {
+            headers.set("Location", `${workerOrigin}/${abs.href}`);
+        }
+    } catch {
+        // keep the original Location when it cannot be parsed
+    }
 }
 
 function rewriteSetCookieHeaders(headers, targetUrl) {
-  if (typeof headers.getSetCookie !== "function") {
-    return;
-  }
-  const cookies = headers.getSetCookie();
-  if (!cookies.length) {
-    return;
-  }
-  headers.delete("Set-Cookie");
-  const tag = hostTag(new URL(targetUrl).host);
-  cookies.forEach((cookie) => headers.append("Set-Cookie", rewriteSetCookie(cookie, tag)));
+    if (typeof headers.getSetCookie !== "function") {
+        return;
+    }
+    const cookies = headers.getSetCookie();
+    if (!cookies.length) {
+        return;
+    }
+    headers.delete("Set-Cookie");
+    const tag = hostTag(new URL(targetUrl).host);
+    cookies.forEach((cookie) => {
+        headers.append("Set-Cookie", rewriteSetCookie(cookie, tag));
+    });
 }
 
 // Scope every upstream cookie to the worker origin: drop Domain, pin Path=/,
 // prefix the name with a per-target-host tag so sites cannot collide.
 function rewriteSetCookie(cookie, tag) {
-  const parts = cookie.split(";");
-  const eq = parts[0].indexOf("=");
-  if (eq > 0) {
-    const name = parts[0].slice(0, eq).trim();
-    if (name && !name.startsWith(tag)) {
-      parts[0] = " " + tag + name + "=" + parts[0].slice(eq + 1).trim();
+    const parts = cookie.split(";");
+    const eq = parts[0].indexOf("=");
+    if (eq > 0) {
+        const name = parts[0].slice(0, eq).trim();
+        if (name && !name.startsWith(tag)) {
+            parts[0] = ` ${tag}${name}=${parts[0].slice(eq + 1).trim()}`;
+        }
     }
-  }
-  const kept = parts.slice(1).filter((attr) => {
-    const attrName = attr.trim().split("=")[0].toLowerCase();
-    return attrName !== "domain" && attrName !== "path";
-  });
-  kept.push(" Path=/");
-  return parts[0] + kept.join(";");
+    const kept = parts.slice(1).filter((attr) => {
+        const attrName = attr.trim().split("=")[0].toLowerCase();
+        return attrName !== "domain" && attrName !== "path";
+    });
+    kept.push(" Path=/");
+    return parts[0] + kept.join(";");
 }
 
 function hostTag(host) {
-  let hash = 5381;
-  for (let i = 0; i < host.length; i++) {
-    hash = ((hash << 5) + hash + host.charCodeAt(i)) >>> 0;
-  }
-  return "p" + hash.toString(36);
+    let hash = 5381;
+    for (let i = 0; i < host.length; i++) {
+        hash = ((hash << 5) + hash + host.charCodeAt(i)) >>> 0;
+    }
+    return `p${hash.toString(36)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,56 +303,56 @@ function hostTag(host) {
 // ---------------------------------------------------------------------------
 
 function makeCtx(targetUrl, urlObj) {
-  const workerOrigin = urlObj.origin;
-  return {
-    workerOrigin,
-    targetUrl,
-    proxify(value) {
-      if (value == null) {
-        return value;
-      }
-      const v = String(value).trim();
-      if (!v || v.startsWith("#") || /^(data|blob|javascript|mailto|tel|sms|about):/i.test(v)) {
-        return value;
-      }
-      if (/^wss?:\/\//i.test(v)) {
-        return workerOrigin + "/" + v;
-      }
-      let abs;
-      try {
-        abs = new URL(v, targetUrl).href;
-      } catch {
-        return value;
-      }
-      if (abs.startsWith(workerOrigin + "/")) {
-        return abs;
-      }
-      if (!/^https?:\/\//i.test(abs)) {
-        return value;
-      }
-      return workerOrigin + "/" + abs;
-    },
-  };
+    const workerOrigin = urlObj.origin;
+    return {
+        workerOrigin,
+        targetUrl,
+        proxify(value) {
+            if (value == null) {
+                return value;
+            }
+            const v = String(value).trim();
+            if (!v || v.startsWith("#") || /^(data|blob|javascript|mailto|tel|sms|about):/i.test(v)) {
+                return value;
+            }
+            if (/^wss?:\/\//i.test(v)) {
+                return `${workerOrigin}/${v}`;
+            }
+            let abs;
+            try {
+                abs = new URL(v, targetUrl).href;
+            } catch {
+                return value;
+            }
+            if (abs.startsWith(`${workerOrigin}/`)) {
+                return abs;
+            }
+            if (!/^https?:\/\//i.test(abs)) {
+                return value;
+            }
+            return `${workerOrigin}/${abs}`;
+        },
+    };
 }
 
 function rewriteSrcset(value, ctx) {
-  return value
-    .split(",")
-    .map((part) => {
-      const trimmed = part.trim();
-      if (!trimmed) {
-        return part;
-      }
-      const m = /^(\S+)(\s[\s\S]*)?$/.exec(trimmed);
-      return m ? ctx.proxify(m[1]) + (m[2] || "") : part;
-    })
-    .join(", ");
+    return value
+        .split(",")
+        .map((part) => {
+            const trimmed = part.trim();
+            if (!trimmed) {
+                return part;
+            }
+            const m = /^(\S+)(\s[\s\S]*)?$/.exec(trimmed);
+            return m ? ctx.proxify(m[1]) + (m[2] || "") : part;
+        })
+        .join(", ");
 }
 
 function rewriteCssText(css, ctx) {
-  return css
-    .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (m, quote, url) => "url(" + quote + ctx.proxify(url) + quote + ")")
-    .replace(/@import\s+(['"])([^'"]+)\1/gi, (m, quote, url) => "@import " + quote + ctx.proxify(url) + quote);
+    return css
+        .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (_m, quote, url) => `url(${quote}${ctx.proxify(url)}${quote})`)
+        .replace(/@import\s+(['"])([^'"]+)\1/gi, (_m, quote, url) => `@import ${quote}${ctx.proxify(url)}${quote}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -363,21 +360,21 @@ function rewriteCssText(css, ctx) {
 // ---------------------------------------------------------------------------
 
 function detectCharset(contentType, buf) {
-  const fromHeader = /charset=([\w-]+)/i.exec(contentType || "");
-  if (fromHeader) {
-    return fromHeader[1];
-  }
-  const head = new TextDecoder("latin1").decode(buf.slice(0, 4096));
-  const fromMeta = /<meta[^>]+charset\s*=\s*["']?\s*([\w-]+)/i.exec(head);
-  return fromMeta ? fromMeta[1] : "utf-8";
+    const fromHeader = /charset=([\w-]+)/i.exec(contentType || "");
+    if (fromHeader) {
+        return fromHeader[1];
+    }
+    const head = new TextDecoder("latin1").decode(buf.slice(0, 4096));
+    const fromMeta = /<meta[^>]+charset\s*=\s*["']?\s*([\w-]+)/i.exec(head);
+    return fromMeta ? fromMeta[1] : "utf-8";
 }
 
 function decodeBody(buf, charset) {
-  try {
-    return new TextDecoder(charset).decode(buf);
-  } catch {
-    return new TextDecoder("utf-8").decode(buf);
-  }
+    try {
+        return new TextDecoder(charset).decode(buf);
+    } catch {
+        return new TextDecoder("utf-8").decode(buf);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -385,115 +382,115 @@ function decodeBody(buf, charset) {
 // ---------------------------------------------------------------------------
 
 class AttrRewriter {
-  constructor(ctx) {
-    this.ctx = ctx;
-  }
+    constructor(ctx) {
+        this.ctx = ctx;
+    }
 
-  element(el) {
-    if (el.tagName === "link") {
-      const rel = (el.getAttribute("rel") || "").toLowerCase();
-      if (rel === "preconnect" || rel === "dns-prefetch") {
-        el.removeAttribute("href");
-        return;
-      }
+    element(el) {
+        if (el.tagName === "link") {
+            const rel = (el.getAttribute("rel") || "").toLowerCase();
+            if (rel === "preconnect" || rel === "dns-prefetch") {
+                el.removeAttribute("href");
+                return;
+            }
+        }
+        for (const name of REWRITE_ATTRS) {
+            const value = el.getAttribute(name);
+            if (value == null || value === "") {
+                continue;
+            }
+            let next;
+            if (name === "srcset") {
+                next = rewriteSrcset(value, this.ctx);
+            } else if (name === "style") {
+                next = rewriteCssText(value, this.ctx);
+            } else {
+                next = this.ctx.proxify(value);
+            }
+            if (next !== value) {
+                el.setAttribute(name, next);
+            }
+        }
     }
-    for (const name of REWRITE_ATTRS) {
-      const value = el.getAttribute(name);
-      if (value == null || value === "") {
-        continue;
-      }
-      let next;
-      if (name === "srcset") {
-        next = rewriteSrcset(value, this.ctx);
-      } else if (name === "style") {
-        next = rewriteCssText(value, this.ctx);
-      } else {
-        next = this.ctx.proxify(value);
-      }
-      if (next !== value) {
-        el.setAttribute(name, next);
-      }
-    }
-  }
 }
 
 class MetaRefreshRewriter {
-  constructor(ctx) {
-    this.ctx = ctx;
-  }
+    constructor(ctx) {
+        this.ctx = ctx;
+    }
 
-  element(el) {
-    if ((el.getAttribute("http-equiv") || "").toLowerCase() !== "refresh") {
-      return;
+    element(el) {
+        if ((el.getAttribute("http-equiv") || "").toLowerCase() !== "refresh") {
+            return;
+        }
+        const content = el.getAttribute("content");
+        if (!content) {
+            return;
+        }
+        const m = /^\s*(.*?;\s*url\s*=\s*)([\s\S]+)$/i.exec(content);
+        if (!m) {
+            return;
+        }
+        const url = m[2].trim().replace(/^['"]|['"]$/g, "");
+        el.setAttribute("content", m[1] + this.ctx.proxify(url));
     }
-    const content = el.getAttribute("content");
-    if (!content) {
-      return;
-    }
-    const m = /^\s*(.*?;\s*url\s*=\s*)([\s\S]+)$/i.exec(content);
-    if (!m) {
-      return;
-    }
-    const url = m[2].trim().replace(/^['"]|['"]$/g, "");
-    el.setAttribute("content", m[1] + this.ctx.proxify(url));
-  }
 }
 
 // <style> text arrives in chunks; buffer until the last chunk, then rewrite once.
 class StyleTextRewriter {
-  constructor(ctx) {
-    this.ctx = ctx;
-    this.buf = "";
-  }
-
-  text(chunk) {
-    this.buf += chunk.text;
-    if (chunk.lastInTextNode) {
-      chunk.replace(rewriteCssText(this.buf, this.ctx), { html: false });
-      this.buf = "";
-    } else {
-      chunk.remove();
+    constructor(ctx) {
+        this.ctx = ctx;
+        this.buf = "";
     }
-  }
+
+    text(chunk) {
+        this.buf += chunk.text;
+        if (chunk.lastInTextNode) {
+            chunk.replace(rewriteCssText(this.buf, this.ctx), { html: false });
+            this.buf = "";
+        } else {
+            chunk.remove();
+        }
+    }
 }
 
 class HeadInjector {
-  constructor(scriptHtml) {
-    this.scriptHtml = scriptHtml;
-  }
+    constructor(scriptHtml) {
+        this.scriptHtml = scriptHtml;
+    }
 
-  element(el) {
-    el.append(this.scriptHtml, { html: true });
-  }
+    element(el) {
+        el.append(this.scriptHtml, { html: true });
+    }
 }
 
 async function serveHtml(res, targetUrl, urlObj) {
-  const buf = await res.arrayBuffer();
-  const html = decodeBody(buf, detectCharset(res.headers.get("Content-Type"), buf));
+    const buf = await res.arrayBuffer();
+    const html = decodeBody(buf, detectCharset(res.headers.get("Content-Type"), buf));
 
-  const headers = buildResponseHeaders(res, targetUrl, urlObj, {});
-  headers.set("Content-Type", "text/html; charset=utf-8");
+    const headers = buildResponseHeaders(res, targetUrl, urlObj, {});
+    headers.set("Content-Type", "text/html; charset=utf-8");
 
-  const ctx = makeCtx(targetUrl, urlObj);
-  const shim = clientShim(hostTag(new URL(targetUrl).host));
-  return new HTMLRewriter()
-    .on(REWRITE_ELEMENTS, new AttrRewriter(ctx))
-    .on("meta", new MetaRefreshRewriter(ctx))
-    .on("style", new StyleTextRewriter(ctx))
-    .on("head", new HeadInjector(shim))
-    .transform(new Response(html, { status: res.status, statusText: res.statusText, headers }));
+    const ctx = makeCtx(targetUrl, urlObj);
+    const shim = clientShim(hostTag(new URL(targetUrl).host));
+    return new HTMLRewriter()
+        .on(REWRITE_ELEMENTS, new AttrRewriter(ctx))
+        .on("meta", new MetaRefreshRewriter(ctx))
+        .on("style", new StyleTextRewriter(ctx))
+        .on("head", new HeadInjector(shim))
+        .transform(new Response(html, { status: res.status, statusText: res.statusText, headers }));
 }
 
 async function serveCss(res, targetUrl, urlObj) {
-  const buf = await res.arrayBuffer();
-  const css = rewriteCssText(
-    decodeBody(buf, detectCharset(res.headers.get("Content-Type"), buf)),
-    makeCtx(targetUrl, urlObj),
-  );
+    const buf = await res.arrayBuffer();
+    const css = rewriteCssText(
+        decodeBody(buf, detectCharset(res.headers.get("Content-Type"), buf)),
+        makeCtx(targetUrl, urlObj),
+    );
 
-  const headers = buildResponseHeaders(res, targetUrl, urlObj, {});
-  headers.set("Content-Type", "text/css; charset=utf-8");
-  return new Response(css, { status: res.status, statusText: res.statusText, headers });
+    const headers = buildResponseHeaders(res, targetUrl, urlObj, {});
+    headers.set("Content-Type", "text/css; charset=utf-8");
+    return new Response(css, { status: res.status, statusText: res.statusText, headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -501,54 +498,54 @@ async function serveCss(res, targetUrl, urlObj) {
 // ---------------------------------------------------------------------------
 
 async function proxyWebSocket(req, targetUrl) {
-  const upstreamUrl = targetUrl.replace(/^ws:/i, "http:").replace(/^wss:/i, "https:");
-  const headers = new Headers({ Upgrade: "websocket" });
-  const protocol = req.headers.get("sec-websocket-protocol");
-  if (protocol) {
-    headers.set("Sec-WebSocket-Protocol", protocol);
-  }
-
-  const res = await fetch(upstreamUrl, { headers });
-  if (!res.webSocket) {
-    return jsonError("Upstream did not accept the WebSocket upgrade", 502);
-  }
-
-  const upstream = res.webSocket;
-  upstream.accept();
-  const pair = new WebSocketPair();
-  const server = pair[1];
-  server.accept();
-
-  server.addEventListener("message", (event) => {
-    try {
-      upstream.send(event.data);
-    } catch {
-      // upstream already closed
+    const upstreamUrl = targetUrl.replace(/^ws:/i, "http:").replace(/^wss:/i, "https:");
+    const headers = new Headers({ Upgrade: "websocket" });
+    const protocol = req.headers.get("sec-websocket-protocol");
+    if (protocol) {
+        headers.set("Sec-WebSocket-Protocol", protocol);
     }
-  });
-  upstream.addEventListener("message", (event) => {
-    try {
-      server.send(event.data);
-    } catch {
-      // client already closed
-    }
-  });
-  server.addEventListener("close", (event) => {
-    try {
-      upstream.close(event.code, event.reason);
-    } catch {
-      // already closed
-    }
-  });
-  upstream.addEventListener("close", (event) => {
-    try {
-      server.close(event.code, event.reason);
-    } catch {
-      // already closed
-    }
-  });
 
-  return new Response(null, { status: 101, webSocket: pair[0] });
+    const res = await fetch(upstreamUrl, { headers });
+    if (!res.webSocket) {
+        return jsonError("Upstream did not accept the WebSocket upgrade", 502);
+    }
+
+    const upstream = res.webSocket;
+    upstream.accept();
+    const pair = new WebSocketPair();
+    const server = pair[1];
+    server.accept();
+
+    server.addEventListener("message", (event) => {
+        try {
+            upstream.send(event.data);
+        } catch {
+            // upstream already closed
+        }
+    });
+    upstream.addEventListener("message", (event) => {
+        try {
+            server.send(event.data);
+        } catch {
+            // client already closed
+        }
+    });
+    server.addEventListener("close", (event) => {
+        try {
+            upstream.close(event.code, event.reason);
+        } catch {
+            // already closed
+        }
+    });
+    upstream.addEventListener("close", (event) => {
+        try {
+            server.close(event.code, event.reason);
+        } catch {
+            // already closed
+        }
+    });
+
+    return new Response(null, { status: 101, webSocket: pair[0] });
 }
 
 // ---------------------------------------------------------------------------
@@ -556,35 +553,35 @@ async function proxyWebSocket(req, targetUrl) {
 // ---------------------------------------------------------------------------
 
 function streamResponse(res, headers) {
-  return new Response(res.body, {
-    status: res.status,
-    statusText: res.statusText,
-    headers,
-  });
+    return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers,
+    });
 }
 
 function jsonError(message, status) {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-  });
+    return new Response(JSON.stringify({ error: message }), {
+        status,
+        headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+    });
 }
 
 function usagePage(workerOrigin) {
-  const body = [
-    "<!doctype html><html><head><meta charset='utf-8'><title>Reverse Proxy</title></head><body>",
-    "<h1>Reverse Proxy</h1>",
-    "<ul>",
-    "<li>Page: <code>" + workerOrigin + "/https://example.com/page</code></li>",
-    "<li>Git: <code>git clone " + workerOrigin + "/https://github.com/user/repo.git</code></li>",
-    "<li>WebSocket: <code>new WebSocket(\"" + workerOrigin + "/wss://example.com/ws\")</code></li>",
-    "</ul>",
-    "</body></html>",
-  ].join("");
-  return new Response(body, {
-    status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
-  });
+    const body = [
+        "<!doctype html><html><head><meta charset='utf-8'><title>Reverse Proxy</title></head><body>",
+        "<h1>Reverse Proxy</h1>",
+        "<ul>",
+        `<li>Page: <code>${workerOrigin}/https://example.com/page</code></li>`,
+        `<li>Git: <code>git clone ${workerOrigin}/https://github.com/user/repo.git</code></li>`,
+        `<li>WebSocket: <code>new WebSocket("${workerOrigin}/wss://example.com/ws")</code></li>`,
+        "</ul>",
+        "</body></html>",
+    ].join("");
+    return new Response(body, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -597,7 +594,7 @@ function usagePage(workerOrigin) {
 // target site's own service workers from taking over the proxy origin.
 // String.raw keeps the regex backslashes literal inside the template literal.
 function clientShim(tag) {
-  const code = String.raw`(function () {
+    const code = String.raw`(function () {
   var TAG = "${tag}", W = location.origin;
   var T = location.pathname.slice(1) + location.search;
   var ABS = /^[a-z][a-z0-9+.-]*:/i;
@@ -760,5 +757,5 @@ function clientShim(tag) {
   }, true);
 })();
 `;
-  return "<script>" + code + "</script>";
+    return `<script>${code}</script>`;
 }

@@ -11,9 +11,18 @@ This repository contains Cloudflare Workers scripts for various purposes:
 - proxy.js: General reverse proxy
 - scraper.js: Web scraping utility
 
+Superseded scripts live in `archive/` and are excluded from linting.
+
 ## Development Commands
 
 This is a pure JavaScript project with no build system. Each worker is a standalone script.
+Biome (pinned in devDependencies) enforces the formatting rules below; run `pnpm install` first.
+
+### Lint & Format
+```bash
+pnpm run lint       # Biome check (formatter + linter), same gate as CI
+pnpm run lint:fix   # apply safe fixes and formatting
+```
 
 ### Testing
 Since there are no automated tests defined, manual testing involves:
@@ -29,6 +38,7 @@ wrangler deploy worker-name
 ## Code Style Guidelines
 
 ### General Formatting
+Enforced by Biome (see `biome.json`); the config matches these rules:
 - Use 4 spaces for indentation (not tabs)
 - Keep lines under 120 characters when possible
 - No trailing whitespace

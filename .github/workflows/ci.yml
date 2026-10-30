@@ -1,0 +1,41 @@
+# Quality gates on every push/PR: `pnpm run ci` runs Biome (formatter + linter)
+# over the worker scripts, exactly the same command as locally. Can also be
+# triggered manually from the Actions page (workflow_dispatch).
+#
+# pnpm version is read from package.json's packageManager (pnpm@12.6.0);
+# the lockfile (pnpm-lock.yaml) must be committed for --frozen-lockfile.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Keep at most one run per branch; a new commit cancels the in-flight one
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (Biome check)
+        run: pnpm run ci
