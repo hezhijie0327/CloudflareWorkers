@@ -6,8 +6,8 @@ This guide contains important information for agents working with this Cloudflar
 
 This repository contains Cloudflare Workers scripts for various purposes. Each worker lives in
 its own directory with a `worker.js` and a per-worker `wrangler.jsonc`:
-- container/worker.js: Container registry proxy for Docker, GCR, etc.
-- proxy/worker.js: General reverse proxy
+- container-proxy/worker.js: Container registry proxy for Docker, GCR, etc.
+- reverse-proxy/worker.js: General reverse proxy
 
 ## Development Commands
 
@@ -46,6 +46,8 @@ Enforced by Biome (see `biome.json`); the config matches these rules:
 - No ES6 modules - use vanilla JavaScript
 - All functions are defined in the global scope
 - No external dependencies - Cloudflare Workers provides built-in APIs
+- Workers secrets go in bindings (e.g. `env.GITHUB_TOKEN` via `wrangler secret put`),
+  never in source
 
 ### Naming Conventions
 - Functions: camelCase (e.g., `handleRequest`, `fetchHandler`)
