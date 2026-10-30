@@ -4,6 +4,11 @@
 
 ## 项目概览
 
+| 目录 | 功能 |
+| --- | --- |
+| `container/` | 容器镜像仓库代理（Docker Hub、GHCR、quay.io、gcr.io 等 9 个源，支持 login/pull） |
+| `proxy/` | 通用反向代理（任意 URL 透传、网页改写、SPA 适配、git 与 WebSocket 支持） |
+
 ## 部署方法
 
 ### 准备工作
@@ -23,12 +28,14 @@ wrangler auth login
 
 ### 部署单个 Worker
 
+每个 worker 位于独立目录（含 `worker.js` 与各自的 `wrangler.jsonc`，`name` 按需修改）：
+
 ```bash
 # 部署容器代理
-wrangler deploy container.js
+wrangler deploy --config container/wrangler.jsonc
 
-# 部署其他脚本
-wrangler deploy proxy.js
+# 部署通用反向代理
+wrangler deploy --config proxy/wrangler.jsonc
 ```
 
 ## 注意事项

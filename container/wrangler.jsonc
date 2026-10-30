@@ -1,0 +1,8 @@
+{
+    "name": "container-proxy",
+    // Adjust to the worker name actually deployed on your account.
+    "main": "worker.js",
+    // Bump forward when upgrading wrangler; these Workers use only stable
+    // runtime APIs (HTMLRewriter is proxy-only).
+    "compatibility_date": "2025-01-01"
+}

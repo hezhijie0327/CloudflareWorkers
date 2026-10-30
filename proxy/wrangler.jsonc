@@ -1,0 +1,8 @@
+{
+    "name": "reverse-proxy",
+    // Adjust to the worker name actually deployed on your account.
+    "main": "worker.js",
+    // Bump forward when upgrading wrangler; proxy/worker.js additionally uses
+    // HTMLRewriter, WebSocketPair and Headers.getSetCookie.
+    "compatibility_date": "2025-01-01"
+}
