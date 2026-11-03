@@ -4,10 +4,10 @@
 
 ## 项目概览
 
-| 目录 | 功能 |
-| --- | --- |
+| 目录                       | 功能                                                                             |
+| -------------------------- | -------------------------------------------------------------------------------- |
 | `workers/container-proxy/` | 容器镜像仓库代理（Docker Hub、GHCR、quay.io、gcr.io 等 9 个源，支持 login/pull） |
-| `workers/reverse-proxy/` | 通用反向代理（任意 URL 透传、网页改写、SPA 适配、git 与 WebSocket 支持） |
+| `workers/reverse-proxy/`   | 通用反向代理（任意 URL 透传、网页改写、SPA 适配、git 与 WebSocket 支持）         |
 
 ## 部署方法
 

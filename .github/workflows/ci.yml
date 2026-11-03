@@ -8,34 +8,34 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
 
 # Keep at most one run per branch; a new commit cancels the in-flight one
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+            - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: pnpm
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+                  cache: pnpm
 
-      - name: Install
-        run: pnpm install --frozen-lockfile
+            - name: Install
+              run: pnpm install --frozen-lockfile
 
-      - name: Lint (Biome check)
-        run: pnpm run ci
+            - name: Lint (Biome check)
+              run: pnpm run ci

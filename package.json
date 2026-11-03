@@ -7,12 +7,13 @@
         "lint:fix": "biome check --write",
         "format": "biome format",
         "typecheck": "tsc --noEmit",
+        "bump-compat": "node scripts/bump-compat-date.js",
         "ci": "pnpm run lint && pnpm run typecheck"
     },
     "devDependencies": {
-        "@biomejs/biome": "2.5.15",
-        "@cloudflare/workers-types": "^5.20261102.1",
+        "@biomejs/biome": "2.6.4",
+        "@cloudflare/workers-types": "^5.20261103.1",
         "typescript": "^7.0.2"
     },
-    "packageManager": "pnpm@12.6.0"
+    "packageManager": "pnpm@12.16.1"
 }
