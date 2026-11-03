@@ -2,7 +2,7 @@
 # over the worker scripts, exactly the same command as locally. Can also be
 # triggered manually from the Actions page (workflow_dispatch).
 #
-# pnpm version is read from package.json's packageManager (pnpm@12.6.0);
+# pnpm version is read from package.json's packageManager;
 # the lockfile (pnpm-lock.yaml) must be committed for --frozen-lockfile.
 
 name: CI
@@ -31,7 +31,9 @@ jobs:
 
             - uses: actions/setup-node@v5
               with:
-                  node-version: 22
+                  # Track the newest LTS line; biome and tsc are pinned by the
+                  # lockfile, so runtime drift between LTS majors is harmless.
+                  node-version: "lts/*"
                   cache: pnpm
 
             - name: Install
