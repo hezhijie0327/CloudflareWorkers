@@ -87,6 +87,7 @@ async function fetchHandler(e) {
     }
 }
 
+/** @param {Request} req @param {string} targetUrl @param {URL} urlObj */
 async function proxyHttp(req, targetUrl, urlObj) {
     const git = isGitTarget(targetUrl, req);
     const res = await fetch(targetUrl, {
@@ -112,6 +113,7 @@ async function proxyHttp(req, targetUrl, urlObj) {
     return streamResponse(res, headers);
 }
 
+/** @param {URL} urlObj @param {Request} req */
 function extractTarget(urlObj, req) {
     const raw = urlObj.href
         .slice(urlObj.origin.length + 1)
@@ -131,6 +133,7 @@ function extractTarget(urlObj, req) {
 
 // JS-driven navigations can land on a bare worker path; resolve them against
 // the target embedded in the referer of the proxied page.
+/** @param {URL} urlObj @param {Request} req */
 function resolveViaReferer(urlObj, req) {
     const referer = req.headers.get("referer");
     if (!referer) {
@@ -151,6 +154,7 @@ function resolveViaReferer(urlObj, req) {
     }
 }
 
+/** @param {string} targetUrl @param {Request} req */
 function isGitTarget(targetUrl, req) {
     if (req.headers.get("git-protocol")) {
         return true;
@@ -166,6 +170,7 @@ function isGitTarget(targetUrl, req) {
 // Request header handling
 // ---------------------------------------------------------------------------
 
+/** @param {Request} req @param {string} targetUrl @param {URL} urlObj */
 function filterRequestHeaders(req, targetUrl, urlObj) {
     const out = new Headers();
     req.headers.forEach((value, key) => {
@@ -185,6 +190,7 @@ function filterRequestHeaders(req, targetUrl, urlObj) {
 }
 
 // The browser saw the worker origin; the upstream expects its own.
+/** @param {Headers} headers @param {string} workerOrigin @param {string} targetOrigin */
 function retargetSelfReferences(headers, workerOrigin, targetOrigin) {
     const referer = headers.get("referer");
     if (referer?.startsWith(`${workerOrigin}/`)) {
@@ -202,11 +208,12 @@ function retargetSelfReferences(headers, workerOrigin, targetOrigin) {
 
 // Un-prefix the namespaced cookies of the current target host; cookies of other
 // target sites and worker-managed cookies never reach the upstream.
+/** @param {string | null} header @param {string} tag */
 function translateRequestCookie(header, tag) {
     if (!header) {
         return null;
     }
-    const keep = [];
+    const keep = /** @type {string[]} */ ([]);
     header.split(";").forEach((pair) => {
         const eq = pair.indexOf("=");
         if (eq < 1) {
@@ -224,6 +231,7 @@ function translateRequestCookie(header, tag) {
 // Response header handling
 // ---------------------------------------------------------------------------
 
+/** @param {Response} res @param {string} targetUrl @param {URL} urlObj @param {{ git?: boolean }} opts */
 function buildResponseHeaders(res, targetUrl, urlObj, opts) {
     const out = new Headers(res.headers);
     RESPONSE_DROP_HEADERS.forEach((name) => {
@@ -241,6 +249,7 @@ function buildResponseHeaders(res, targetUrl, urlObj, opts) {
     return out;
 }
 
+/** @param {Headers} headers @param {string} targetUrl @param {string} workerOrigin */
 function rewriteLocationHeader(headers, targetUrl, workerOrigin) {
     const location = headers.get("Location");
     if (!location) {
@@ -256,6 +265,7 @@ function rewriteLocationHeader(headers, targetUrl, workerOrigin) {
     }
 }
 
+/** @param {Headers} headers @param {string} targetUrl */
 function rewriteSetCookieHeaders(headers, targetUrl) {
     if (typeof headers.getSetCookie !== "function") {
         return;
@@ -273,6 +283,7 @@ function rewriteSetCookieHeaders(headers, targetUrl) {
 
 // Scope every upstream cookie to the worker origin: drop Domain, pin Path=/,
 // prefix the name with a per-target-host tag so sites cannot collide.
+/** @param {string} cookie @param {string} tag */
 function rewriteSetCookie(cookie, tag) {
     const parts = cookie.split(";");
     const eq = parts[0].indexOf("=");
@@ -290,6 +301,7 @@ function rewriteSetCookie(cookie, tag) {
     return parts[0] + kept.join(";");
 }
 
+/** @param {string} host */
 function hostTag(host) {
     let hash = 5381;
     for (let i = 0; i < host.length; i++) {
@@ -302,6 +314,14 @@ function hostTag(host) {
 // URL rewriting context and text rewriting
 // ---------------------------------------------------------------------------
 
+/**
+ * @typedef {Object} RewriteCtx
+ * @property {string} workerOrigin
+ * @property {string} targetUrl
+ * @property {(value: string) => string} proxify
+ */
+
+/** @param {string} targetUrl @param {URL} urlObj @returns {RewriteCtx} */
 function makeCtx(targetUrl, urlObj) {
     const workerOrigin = urlObj.origin;
     return {
@@ -335,6 +355,7 @@ function makeCtx(targetUrl, urlObj) {
     };
 }
 
+/** @param {string} value @param {RewriteCtx} ctx */
 function rewriteSrcset(value, ctx) {
     return value
         .split(",")
@@ -349,6 +370,7 @@ function rewriteSrcset(value, ctx) {
         .join(", ");
 }
 
+/** @param {string} css @param {RewriteCtx} ctx */
 function rewriteCssText(css, ctx) {
     return css
         .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (_m, quote, url) => `url(${quote}${ctx.proxify(url)}${quote})`)
@@ -359,6 +381,7 @@ function rewriteCssText(css, ctx) {
 // Charset handling
 // ---------------------------------------------------------------------------
 
+/** @param {string | null} contentType @param {ArrayBuffer} buf */
 function detectCharset(contentType, buf) {
     const fromHeader = /charset=([\w-]+)/i.exec(contentType || "");
     if (fromHeader) {
@@ -369,6 +392,7 @@ function detectCharset(contentType, buf) {
     return fromMeta ? fromMeta[1] : "utf-8";
 }
 
+/** @param {ArrayBuffer} buf @param {string} charset */
 function decodeBody(buf, charset) {
     try {
         return new TextDecoder(charset).decode(buf);
@@ -392,10 +416,12 @@ function decodeAttributeValue(value) {
 }
 
 class AttrRewriter {
+    /** @param {RewriteCtx} ctx */
     constructor(ctx) {
         this.ctx = ctx;
     }
 
+    /** @param {any} el */
     element(el) {
         if (el.tagName === "link") {
             const rel = (el.getAttribute("rel") || "").toLowerCase();
@@ -426,10 +452,12 @@ class AttrRewriter {
 }
 
 class MetaRefreshRewriter {
+    /** @param {RewriteCtx} ctx */
     constructor(ctx) {
         this.ctx = ctx;
     }
 
+    /** @param {any} el */
     element(el) {
         if ((el.getAttribute("http-equiv") || "").toLowerCase() !== "refresh") {
             return;
@@ -449,11 +477,13 @@ class MetaRefreshRewriter {
 
 // <style> text arrives in chunks; buffer until the last chunk, then rewrite once.
 class StyleTextRewriter {
+    /** @param {RewriteCtx} ctx */
     constructor(ctx) {
         this.ctx = ctx;
         this.buf = "";
     }
 
+    /** @param {any} chunk */
     text(chunk) {
         this.buf += chunk.text;
         if (chunk.lastInTextNode) {
@@ -466,15 +496,18 @@ class StyleTextRewriter {
 }
 
 class HeadInjector {
+    /** @param {string} scriptHtml */
     constructor(scriptHtml) {
         this.scriptHtml = scriptHtml;
     }
 
+    /** @param {any} el */
     element(el) {
         el.append(this.scriptHtml, { html: true });
     }
 }
 
+/** @param {Response} res @param {string} targetUrl @param {URL} urlObj */
 async function serveHtml(res, targetUrl, urlObj) {
     const buf = await res.arrayBuffer();
     const html = decodeBody(buf, detectCharset(res.headers.get("Content-Type"), buf));
@@ -492,6 +525,7 @@ async function serveHtml(res, targetUrl, urlObj) {
         .transform(new Response(html, { status: res.status, statusText: res.statusText, headers }));
 }
 
+/** @param {Response} res @param {string} targetUrl @param {URL} urlObj */
 async function serveCss(res, targetUrl, urlObj) {
     const buf = await res.arrayBuffer();
     const css = rewriteCssText(
@@ -508,6 +542,7 @@ async function serveCss(res, targetUrl, urlObj) {
 // WebSocket relay
 // ---------------------------------------------------------------------------
 
+/** @param {Request} req @param {string} targetUrl */
 async function proxyWebSocket(req, targetUrl) {
     const upstreamUrl = targetUrl.replace(/^ws:/i, "http:").replace(/^wss:/i, "https:");
     const headers = new Headers({ Upgrade: "websocket" });
@@ -563,6 +598,7 @@ async function proxyWebSocket(req, targetUrl) {
 // Small responses
 // ---------------------------------------------------------------------------
 
+/** @param {Response} res @param {Headers} headers */
 function streamResponse(res, headers) {
     return new Response(res.body, {
         status: res.status,
@@ -571,6 +607,7 @@ function streamResponse(res, headers) {
     });
 }
 
+/** @param {string} message @param {number} status */
 function jsonError(message, status) {
     return new Response(JSON.stringify({ error: message }), {
         status,
@@ -578,6 +615,7 @@ function jsonError(message, status) {
     });
 }
 
+/** @param {string} workerOrigin */
 function usagePage(workerOrigin) {
     const body = [
         "<!doctype html><html><head><meta charset='utf-8'><title>Reverse Proxy</title></head><body>",
@@ -604,6 +642,7 @@ function usagePage(workerOrigin) {
 // form submits), namespaces document.cookie per target host, and blocks the
 // target site's own service workers from taking over the proxy origin.
 // String.raw keeps the regex backslashes literal inside the template literal.
+/** @param {string} tag */
 function clientShim(tag) {
     const code = String.raw`(function () {
   var TAG = "${tag}", W = location.origin;

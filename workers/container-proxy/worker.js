@@ -28,6 +28,7 @@ const DOCKER_AUTH_ORIGIN = "https://auth.docker.io";
 // Registries whose auth realm lives outside the registry host itself; these
 // hosts must also be rewritten to the worker host or `docker login` would
 // bypass the proxy. Values are regex-escaped host fragments.
+/** @type {{ [host: string]: string[] }} */
 const REALM_ALIAS_HOSTS = {
     "docker.elastic.co": ["docker-auth\\.elastic\\.co"],
 };
@@ -86,6 +87,7 @@ async function fetchHandler(e) {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** @param {Request} request @param {string} upstreamHost */
 function upstreamHeaders(request, upstreamHost) {
     const headers = new Headers(request.headers);
     headers.set("Host", upstreamHost);
@@ -94,8 +96,13 @@ function upstreamHeaders(request, upstreamHost) {
 
 // Registries redirect layer pulls to CDNs; follow server-side so the client
 // sees a single response. Docker Hub's 307 only replays as a GET.
+/** @param {Response} response @param {boolean} isDockerHub */
 function followUpstreamRedirect(response, isDockerHub) {
     const location = response.headers.get("Location");
+    // Unreachable in practice: callers check headers.has("Location") first.
+    if (!location) {
+        return jsonError("Upstream redirect missing Location", 500);
+    }
     return fetch(
         new Request(location, {
             method: isDockerHub && response.status === 307 ? "GET" : undefined,
@@ -104,6 +111,7 @@ function followUpstreamRedirect(response, isDockerHub) {
     );
 }
 
+/** @param {Headers} headers */
 function applyCommonHeaders(headers) {
     Object.entries(RESPONSE_SET_HEADERS).forEach(([key, value]) => {
         headers.set(key, value);
@@ -114,6 +122,7 @@ function applyCommonHeaders(headers) {
 // CLI sends its token requests through the proxy too. Docker Hub realms use
 // auth.docker.io / auth.ipv6.docker.com; other registries may have aliases
 // (REALM_ALIAS_HOSTS) or host the realm on the registry host itself.
+/** @param {Headers} headers @param {string} upstreamHost @param {string} workerHost @param {boolean} isDockerHub */
 function rewriteAuthRealm(headers, upstreamHost, workerHost, isDockerHub) {
     if (!headers.has("WWW-Authenticate")) {
         return;
@@ -136,6 +145,7 @@ function rewriteAuthRealm(headers, upstreamHost, workerHost, isDockerHub) {
     }
 }
 
+/** @param {string} message @param {number} status */
 function jsonError(message, status) {
     return new Response(JSON.stringify({ error: message }), {
         status,

@@ -6,10 +6,13 @@
         "lint": "biome check",
         "lint:fix": "biome check --write",
         "format": "biome format",
-        "ci": "pnpm run lint"
+        "typecheck": "tsc --noEmit",
+        "ci": "pnpm run lint && pnpm run typecheck"
     },
     "devDependencies": {
-        "@biomejs/biome": "2.5.15"
+        "@biomejs/biome": "2.5.15",
+        "@cloudflare/workers-types": "^5.20261102.1",
+        "typescript": "^7.0.2"
     },
     "packageManager": "pnpm@12.6.0"
 }

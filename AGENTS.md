@@ -20,6 +20,13 @@ pnpm run lint       # Biome check (formatter + linter), same gate as CI
 pnpm run lint:fix   # apply safe fixes and formatting
 ```
 
+### Type Check
+```bash
+pnpm run typecheck  # tsc --noEmit over workers/ (same gate as CI)
+```
+Worker files are plain JavaScript; JSDoc annotations plus `tsconfig.json` (checkJs, strict,
+`@cloudflare/workers-types`) give editors and CI real runtime types without a build step.
+
 ### Testing
 Since there are no automated tests defined, manual testing involves:
 1. Deploying to a Cloudflare Workers account
@@ -45,7 +52,8 @@ Enforced by Biome (see `biome.json`); the config matches these rules:
 ### Import/Export Patterns
 - No ES6 modules - use vanilla JavaScript
 - All functions are defined in the global scope
-- No external dependencies - Cloudflare Workers provides built-in APIs
+- No runtime dependencies - Cloudflare Workers provides built-in APIs; devDependencies
+  are tooling only (Biome, TypeScript, @cloudflare/workers-types)
 - Workers secrets go in bindings (e.g. `env.GITHUB_TOKEN` via `wrangler secret put`),
   never in source
 

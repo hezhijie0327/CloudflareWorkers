@@ -4,7 +4,13 @@
     "main": "worker.js",
     // Bump forward when upgrading wrangler; worker.js additionally uses
     // HTMLRewriter, WebSocketPair and Headers.getSetCookie.
-    "compatibility_date": "2026-11-03",
+    // Cloudflare Builds deploys with the latest wrangler; keep this at its
+    // release date. Same runtime cache switch as the blog site Worker; the
+    // worker sets no-store for rewritten pages, upstream headers govern the rest.
+    "compatibility_date": "2026-11-02",
+    "cache": {
+        "enabled": true
+    },
     "observability": {
         "logs": {
             "enabled": true,

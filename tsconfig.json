@@ -1,0 +1,19 @@
+{
+    "$schema": "./node_modules/typescript/schemas/tsconfig.schema.json",
+    "compilerOptions": {
+        "target": "es2022",
+        "module": "es2022",
+        // Isolate each worker file from the others (identical global const
+        // names) without touching the files: real `export {}` would flip
+        // wrangler to module-worker format and break addEventListener("fetch").
+        "moduleDetection": "force",
+        "lib": ["es2022"],
+        "types": ["@cloudflare/workers-types"],
+        "allowJs": true,
+        "checkJs": true,
+        "strict": true,
+        "noEmit": true,
+        "skipLibCheck": true
+    },
+    "include": ["workers/**/*.js"]
+}
