@@ -6,8 +6,8 @@ This guide contains important information for agents working with this Cloudflar
 
 This repository contains Cloudflare Workers scripts for various purposes. Each worker lives in
 its own directory with a `worker.js` and a per-worker `wrangler.jsonc`:
-- container-proxy/worker.js: Container registry proxy for Docker, GCR, etc.
-- reverse-proxy/worker.js: General reverse proxy
+- workers/container-proxy/worker.js: Container registry proxy for Docker, GCR, etc.
+- workers/reverse-proxy/worker.js: General reverse proxy
 
 ## Development Commands
 
@@ -29,8 +29,8 @@ Since there are no automated tests defined, manual testing involves:
 Each worker directory has its own `wrangler.jsonc` (adjust `name` to the worker name on your
 account). Deploy from the repo root or from inside the worker directory:
 ```bash
-wrangler deploy --config container/wrangler.jsonc
-wrangler deploy --config proxy/wrangler.jsonc
+wrangler deploy --config workers/container-proxy/wrangler.jsonc
+wrangler deploy --config workers/reverse-proxy/wrangler.jsonc
 ```
 
 ## Code Style Guidelines

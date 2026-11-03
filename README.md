@@ -6,8 +6,8 @@
 
 | 目录 | 功能 |
 | --- | --- |
-| `container-proxy/` | 容器镜像仓库代理（Docker Hub、GHCR、quay.io、gcr.io 等 9 个源，支持 login/pull） |
-| `reverse-proxy/` | 通用反向代理（任意 URL 透传、网页改写、SPA 适配、git 与 WebSocket 支持） |
+| `workers/container-proxy/` | 容器镜像仓库代理（Docker Hub、GHCR、quay.io、gcr.io 等 9 个源，支持 login/pull） |
+| `workers/reverse-proxy/` | 通用反向代理（任意 URL 透传、网页改写、SPA 适配、git 与 WebSocket 支持） |
 
 ## 部署方法
 
@@ -32,10 +32,10 @@ wrangler auth login
 
 ```bash
 # 部署容器代理
-wrangler deploy --config container-proxy/wrangler.jsonc
+wrangler deploy --config workers/container-proxy/wrangler.jsonc
 
 # 部署通用反向代理
-wrangler deploy --config reverse-proxy/wrangler.jsonc
+wrangler deploy --config workers/reverse-proxy/wrangler.jsonc
 ```
 
 ## 注意事项
