@@ -11,6 +11,11 @@
     "cache": {
         "enabled": true
     },
+    // Smart Placement: most upstreams (GitHub git/raw) sit in US regions, so
+    // execution moves near them; the user-facing entry edge is unchanged.
+    "placement": {
+        "mode": "smart"
+    },
     "observability": {
         "logs": {
             "enabled": true,

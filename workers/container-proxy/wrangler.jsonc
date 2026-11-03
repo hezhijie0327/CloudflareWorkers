@@ -10,6 +10,11 @@
     "cache": {
         "enabled": true
     },
+    // Smart Placement: registry blob CDNs already live on Cloudflare's edge, so
+    // the analysis may keep standard placement; auth/manifest requests benefit.
+    "placement": {
+        "mode": "smart"
+    },
     "observability": {
         "logs": {
             "enabled": true,
