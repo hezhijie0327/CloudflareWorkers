@@ -1,2 +1,1 @@
-minimumReleaseAgeExclude:
-    - "@cloudflare/workers-types@5.20261103.1"
+minimumReleaseAge: 0
