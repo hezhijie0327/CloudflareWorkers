@@ -151,3 +151,7 @@ When making changes:
 2. Test manually by deploying to a staging environment
 3. Ensure backward compatibility when modifying existing functionality
 4. Update version comments when making significant changes
+
+## Git commit convention
+
+Every commit subject starts with a type prefix — `feat` / `fix` / `chore` / `docs` / `refactor` / `perf` / `test` / `build` — optionally scoped: `fix(proxy): ...`. Subject: imperative, lowercase start, no trailing period, aim ≤ 72 chars; detail goes in the body after a blank line (why, not what); breaking changes take `!` before the colon or a `BREAKING CHANGE:` body footer.
